@@ -441,6 +441,27 @@ app.post('/api/kie/generate', async (req: Request, res: Response): Promise<void>
 });
 
 // -------------------------------------------------------------
+// Helper: Cache remote image to local server disk (/uploads/*.png)
+// -------------------------------------------------------------
+async function cacheRemoteImageToDisk(remoteUrl: string, prefix = 'kie'): Promise<string> {
+  try {
+    const res = await fetch(remoteUrl);
+    if (res.ok) {
+      const arrayBuffer = await res.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const filename = `${prefix}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.png`;
+      const filePath = path.join(process.cwd(), 'uploads', filename);
+      fs.writeFileSync(filePath, buffer);
+      console.log(`[Storage] Saved Kie.ai generated image to local server disk: /uploads/${filename}`);
+      return `/uploads/${filename}`;
+    }
+  } catch (e: any) {
+    console.warn('[Storage] Failed caching remote image to disk, falling back to direct URL:', e?.message || e);
+  }
+  return remoteUrl;
+}
+
+// -------------------------------------------------------------
 // API ROUTE B: Status Check Route (Polling Kie.ai or Local Jobs)
 // -------------------------------------------------------------
 app.get('/api/kie/status', async (req: Request, res: Response): Promise<void> => {
@@ -456,8 +477,11 @@ app.get('/api/kie/status', async (req: Request, res: Response): Promise<void> =>
   // Check remote Kie.ai API if taskId is from remote Kie.ai
   if (kieApiKey && kieApiKey.trim() !== '' && !taskId.startsWith('job_kie_')) {
     try {
-      // Query Kie.ai getTaskDetail endpoint
-      let response = await fetch(`https://api.kie.ai/api/v1/jobs/getTaskDetail?taskId=${taskId}`, {
+      // Primary OpenAPI unified query endpoint for Market models: /api/v1/jobs/recordInfo?taskId=...
+      const recordInfoUrl = `https://api.kie.ai/api/v1/jobs/recordInfo?taskId=${encodeURIComponent(taskId)}`;
+      console.log(`[Kie.ai] Polling recordInfo: ${recordInfoUrl}`);
+
+      const response = await fetch(recordInfoUrl, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${kieApiKey.trim()}`,
@@ -465,63 +489,94 @@ app.get('/api/kie/status', async (req: Request, res: Response): Promise<void> =>
         },
       });
 
-      if (!response.ok) {
-        // Try fallback recordInfo endpoint if getTaskDetail returns 404
-        response = await fetch(`https://api.kie.ai/api/v1/jobs/recordInfo?taskId=${taskId}`, {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${kieApiKey.trim()}`,
-            'Content-Type': 'application/json',
-          },
-        });
+      const rawText = await response.text();
+      let data: any = {};
+      try {
+        data = JSON.parse(rawText);
+      } catch (parseErr) {
+        console.warn(`[Kie.ai] Non-JSON response for ${taskId}:`, rawText);
       }
 
-      const data: any = await response.json();
-      console.log(`[Kie.ai] Task detail response for ${taskId}:`, JSON.stringify(data));
+      console.log(`[Kie.ai] recordInfo status response for ${taskId}:`, JSON.stringify(data));
 
-      if (response.ok) {
-        const result = data.data || data;
-        const stateStr = (result.state || result.status || '').toString().toLowerCase();
+      if (data && (data.data || data.code !== undefined)) {
+        const taskData = data.data || data;
+        const stateStr = (taskData.state || taskData.status || '').toString().toLowerCase();
 
-        // Extract image url from various possible output shapes in Kie.ai
-        let foundImageUrl = 
-          result.resultUrl || 
-          result.imageUrl || 
-          result.output_url ||
-          (Array.isArray(result.outputs) ? result.outputs[0] : null) ||
-          (Array.isArray(result.output) ? result.output[0] : null) ||
-          result.output?.image_url ||
-          result.output?.imageUrl ||
-          result.result?.imageUrl ||
-          result.result?.url;
+        // 1. Success state: extract image from resultJson
+        if (stateStr === 'success' || stateStr === 'completed') {
+          let foundImageUrl: string | null = null;
 
-        // In some cases output is a stringified JSON
-        if (!foundImageUrl && typeof result.output === 'string' && result.output.startsWith('{')) {
-          try {
-            const parsedOut = JSON.parse(result.output);
-            foundImageUrl = parsedOut.image_url || parsedOut.imageUrl || parsedOut.url || (Array.isArray(parsedOut) ? parsedOut[0] : null);
-          } catch (e) {
-            // ignore
+          // A) Parse resultJson (stringified JSON object containing resultUrls: [])
+          if (taskData.resultJson) {
+            try {
+              const parsedResult = typeof taskData.resultJson === 'string' ? JSON.parse(taskData.resultJson) : taskData.resultJson;
+              if (parsedResult.resultUrls && Array.isArray(parsedResult.resultUrls) && parsedResult.resultUrls.length > 0) {
+                foundImageUrl = parsedResult.resultUrls[0];
+              } else if (parsedResult.resultObject) {
+                foundImageUrl = parsedResult.resultObject.url || parsedResult.resultObject.imageUrl || parsedResult.resultObject.mask_urls?.[0] || null;
+              }
+            } catch (err: any) {
+              console.warn('[Kie.ai] Failed parsing resultJson string:', err?.message || err);
+            }
           }
-        }
 
-        if (stateStr === 'completed' || stateStr === 'success') {
-          res.json({
-            status: 'COMPLETED',
-            imageUrl: foundImageUrl || FALLBACK_APPLIANCE_IMAGES[0],
-            error: null,
-          });
-          return;
-        } else if (stateStr === 'failed' || stateStr === 'error') {
+          // B) Fallback to top-level URL fields if resultJson was not present
+          if (!foundImageUrl) {
+            foundImageUrl = 
+              taskData.resultUrl || 
+              taskData.imageUrl || 
+              taskData.output_url ||
+              (Array.isArray(taskData.outputs) ? taskData.outputs[0] : null) ||
+              (Array.isArray(taskData.output) ? taskData.output[0] : null) ||
+              taskData.output?.image_url ||
+              taskData.output?.imageUrl ||
+              taskData.result?.imageUrl ||
+              taskData.result?.url ||
+              null;
+          }
+
+          if (foundImageUrl) {
+            // Cache remote image directly to local server disk to prevent 24h expiration & CORS issues
+            const permanentDiskUrl = await cacheRemoteImageToDisk(foundImageUrl, 'kie_market');
+
+            res.json({
+              status: 'COMPLETED',
+              imageUrl: permanentDiskUrl,
+              remoteUrl: foundImageUrl,
+              progress: 100,
+              costTime: taskData.costTime || 0,
+              creditsConsumed: taskData.creditsConsumed || 0,
+              error: null,
+            });
+            return;
+          } else {
+            console.warn('[Kie.ai] Success state received but no image URL could be parsed, using fallback.');
+            res.json({
+              status: 'COMPLETED',
+              imageUrl: FALLBACK_APPLIANCE_IMAGES[0],
+              error: null,
+            });
+            return;
+          }
+        } 
+        
+        // 2. Fail state: extract failMsg or failCode
+        else if (stateStr === 'fail' || stateStr === 'failed' || stateStr === 'error') {
+          const errMsg = taskData.failMsg || taskData.failCode || data.msg || 'Kie.ai task failed during generation.';
           res.json({
             status: 'FAILED',
-            error: result.errorMessage || result.error || result.message || 'Kie.ai task failed during generation.',
+            error: errMsg,
           });
           return;
-        } else {
-          // In progress (pending, processing, waiting, running)
+        } 
+        
+        // 3. In-Progress states: 'waiting', 'queuing', 'generating'
+        else {
           res.json({
             status: 'PROCESSING',
+            progress: taskData.progress || (stateStr === 'generating' ? 65 : stateStr === 'queuing' ? 30 : 10),
+            state: stateStr,
             imageUrl: null,
             error: null,
           });
@@ -529,7 +584,7 @@ app.get('/api/kie/status', async (req: Request, res: Response): Promise<void> =>
         }
       }
     } catch (err: any) {
-      console.warn('Failed to query remote Kie.ai status, falling back to local task check:', err?.message || err);
+      console.warn('Failed to query Kie.ai recordInfo status, falling back to local task check:', err?.message || err);
     }
   }
 

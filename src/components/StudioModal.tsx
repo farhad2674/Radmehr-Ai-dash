@@ -22,7 +22,8 @@ import {
   Sun,
   Palette,
   UploadCloud,
-  CheckCircle2
+  CheckCircle2,
+  Edit3
 } from 'lucide-react';
 import { ApplianceTemplate, GeneratedAsset, ExecutionModel, TemplateVariableMode } from '../types';
 import { useKieImageGenerator } from '../hooks/useKieImageGenerator';
@@ -32,6 +33,7 @@ interface StudioModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAssetGenerated?: (asset: GeneratedAsset) => void;
+  onEditTemplate?: (template: ApplianceTemplate) => void;
   userGenerationLimit?: number;
   userCompletedGenerations?: number;
   userAllowUnlimited?: boolean;
@@ -43,6 +45,7 @@ export const StudioModal: React.FC<StudioModalProps> = ({
   isOpen,
   onClose,
   onAssetGenerated,
+  onEditTemplate,
   userGenerationLimit = 50,
   userCompletedGenerations = 24,
   userAllowUnlimited = false,
@@ -243,6 +246,22 @@ export const StudioModal: React.FC<StudioModalProps> = ({
                 {userAllowUnlimited ? 'Unlimited' : `${userCompletedGenerations} / ${userGenerationLimit}`}
               </span>
             </div>
+
+            {onEditTemplate && (
+              <button
+                type="button"
+                onClick={() => {
+                  cancelPolling();
+                  onClose();
+                  onEditTemplate(template);
+                }}
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#DADCE0] bg-white text-[#414754] hover:text-[#1A73E8] hover:border-[#1A73E8] hover:bg-[#F8F9FD] text-xs font-semibold shadow-xs transition-all cursor-pointer"
+                title="Edit this template in Builder"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                <span>Edit Template</span>
+              </button>
+            )}
 
             <button
               onClick={() => {

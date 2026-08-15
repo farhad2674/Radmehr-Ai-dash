@@ -7,7 +7,13 @@ import {
   SlidersHorizontal,
   Image as ImageIcon,
   Cpu,
-  Layers
+  Layers,
+  Edit3,
+  Trash2,
+  Copy,
+  Sliders,
+  MoreVertical,
+  Check
 } from 'lucide-react';
 import { ApplianceTemplate } from '../../types';
 
@@ -15,6 +21,8 @@ interface WorkspaceViewProps {
   templates: ApplianceTemplate[];
   onSelectTemplate: (template: ApplianceTemplate) => void;
   onCreateNewTemplate: () => void;
+  onEditTemplate?: (template: ApplianceTemplate) => void;
+  onDeleteTemplate?: (templateId: string) => void;
   userEmail?: string;
   completedGenerations?: number;
   generationLimit?: number;
@@ -26,6 +34,8 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
   templates,
   onSelectTemplate,
   onCreateNewTemplate,
+  onEditTemplate,
+  onDeleteTemplate,
   userEmail = 'farhad.abdollahi28@gmail.com',
   completedGenerations = 24,
   generationLimit = 50,
@@ -34,6 +44,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const categories = ['All', 'Smart Kitchen', 'Climate Control', 'Home Automation', 'Laundry AI', 'Kitchen Luxury'];
 
@@ -48,20 +59,33 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
     return matchesCategory && matchesSearch;
   });
 
+  const handleDelete = (e: React.MouseEvent, templateId: string) => {
+    e.stopPropagation();
+    if (onDeleteTemplate) {
+      onDeleteTemplate(templateId);
+      setDeleteConfirmId(null);
+    }
+  };
+
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6 animate-fade-in pb-24 md:pb-8">
-      {/* Top Header matching Screenshots 2 & 8 */}
+      {/* Top Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-[#191c23]">
-            Available Templates
-          </h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-[#191c23]">
+              Available Templates
+            </h2>
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-50 text-[#1A73E8] border border-blue-200/60 font-semibold">
+              {templates.length} Active Presets
+            </span>
+          </div>
           <p className="text-sm text-[#5F6368] mt-1">
-            Start building with pre-configured models tailored for enterprise workflows.
+            Start building with pre-configured models, or customize reference prompts and locks as Admin.
           </p>
         </div>
 
-        {/* User Badge matching Screenshot 8 with Quota */}
+        {/* User Badge & Actions */}
         <div className="flex items-center gap-2.5 self-start md:self-auto flex-wrap">
           {/* Quota Limit Badge */}
           <button
@@ -86,11 +110,13 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
           </div>
 
           <button
+            id="workspace-new-template-btn"
             onClick={onCreateNewTemplate}
-            className="md:hidden bg-[#1A73E8] text-white p-2 rounded-full shadow-sm"
-            title="Create Template"
+            className="flex items-center gap-1.5 bg-[#1A73E8] hover:bg-[#1557B0] active:scale-[0.98] text-white px-4 py-2 rounded-full text-xs font-semibold shadow-xs transition-all cursor-pointer"
+            title="Create New Template"
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">New Template</span>
           </button>
         </div>
       </div>
@@ -133,7 +159,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
           <div
             key={template.id}
             id={`template-card-${template.id}`}
-            className="bg-white rounded-2xl border border-[#DADCE0] overflow-hidden shadow-soft hover:shadow-soft-lg transition-all duration-200 flex flex-col group"
+            className="bg-white rounded-2xl border border-[#DADCE0] overflow-hidden shadow-soft hover:shadow-soft-lg transition-all duration-200 flex flex-col group relative"
           >
             {/* Thumbnail Box */}
             <div className="relative aspect-[16/10] bg-[#F1F4F9] overflow-hidden">
@@ -149,17 +175,36 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                 {template.model}
               </div>
 
-              <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-md px-2 py-0.5 rounded-full text-[#1A73E8] text-[10px] font-semibold">
-                {template.category}
+              {/* Admin Quick Action Floating Buttons in top-right */}
+              <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                <div className="bg-white/90 backdrop-blur-md px-2 py-0.5 rounded-full text-[#1A73E8] text-[10px] font-semibold">
+                  {template.category}
+                </div>
+
+                {onEditTemplate && (
+                  <button
+                    id={`quick-edit-template-${template.id}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEditTemplate(template);
+                    }}
+                    title="Edit Saved Template (Admin)"
+                    className="p-1.5 rounded-full bg-white/95 hover:bg-white text-[#191c23] hover:text-[#1A73E8] shadow-md transition-all cursor-pointer hover:scale-105"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             </div>
 
             {/* Content Details */}
             <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
               <div>
-                <h3 className="font-semibold text-base text-[#191c23] group-hover:text-[#1A73E8] transition-colors line-clamp-1">
-                  {template.name}
-                </h3>
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="font-semibold text-base text-[#191c23] group-hover:text-[#1A73E8] transition-colors line-clamp-1">
+                    {template.name}
+                  </h3>
+                </div>
                 <p className="text-xs text-[#5F6368] mt-1.5 line-clamp-2 leading-relaxed">
                   {template.description}
                 </p>
@@ -207,20 +252,71 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                 </div>
               </div>
 
-              {/* Primary Action Button matching screenshots ("Use Template ->") */}
-              <button
-                id={`use-template-btn-${template.id}`}
-                onClick={() => onSelectTemplate(template)}
-                className="w-full bg-[#1A73E8] hover:bg-[#1557B0] active:scale-[0.99] text-white font-medium py-2.5 px-4 rounded-full flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer text-sm"
-              >
-                <span>Use Template</span>
-                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-              </button>
+              {/* Action Buttons: Use Template + Admin Edit Template */}
+              <div className="pt-2 flex items-center gap-2">
+                <button
+                  id={`use-template-btn-${template.id}`}
+                  onClick={() => onSelectTemplate(template)}
+                  className="flex-1 bg-[#1A73E8] hover:bg-[#1557B0] active:scale-[0.99] text-white font-medium py-2.5 px-4 rounded-full flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer text-sm"
+                >
+                  <span>Use Template</span>
+                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                </button>
+
+                {onEditTemplate && (
+                  <button
+                    id={`edit-template-btn-${template.id}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEditTemplate(template);
+                    }}
+                    title="Edit Template Configuration"
+                    className="p-2.5 rounded-full border border-[#DADCE0] bg-white text-[#414754] hover:text-[#1A73E8] hover:border-[#1A73E8] hover:bg-[#F8F9FD] active:scale-[0.97] transition-all cursor-pointer flex items-center justify-center shrink-0"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                  </button>
+                )}
+
+                {onDeleteTemplate && (
+                  deleteConfirmId === template.id ? (
+                    <div className="flex items-center gap-1 animate-fade-in">
+                      <button
+                        onClick={(e) => handleDelete(e, template.id)}
+                        className="p-2.5 rounded-full bg-red-600 text-white hover:bg-red-700 transition-all cursor-pointer text-xs font-semibold"
+                        title="Confirm Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteConfirmId(null);
+                        }}
+                        className="p-2.5 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 transition-all cursor-pointer text-xs"
+                        title="Cancel"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteConfirmId(template.id);
+                      }}
+                      title="Delete Template"
+                      className="p-2.5 rounded-full border border-transparent hover:border-red-200 text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all cursor-pointer flex items-center justify-center shrink-0"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )
+                )}
+              </div>
             </div>
           </div>
         ))}
 
-        {/* "Start Blank" Card matching Screenshot 8 */}
+        {/* "Start Blank" Card */}
         <div
           id="template-card-start-blank"
           onClick={onCreateNewTemplate}

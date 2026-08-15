@@ -81,8 +81,39 @@ export default function App() {
     setMobileSidebarOpen(false);
   };
 
+  // Handle editing existing template (Admin)
+  const handleEditTemplate = (template: ApplianceTemplate) => {
+    setBuilderTemplate(template);
+    setCurrentView('builder');
+    setMobileSidebarOpen(false);
+  };
+
+  // Handle deleting template (Admin)
+  const handleDeleteTemplate = async (templateId: string) => {
+    const target = templates.find((t) => t.id === templateId);
+    setTemplates((prev) => prev.filter((t) => t.id !== templateId));
+    storageService.deleteTemplate(templateId);
+
+    if (target) {
+      const newLog: AuditLogEntry = {
+        id: `log-${Date.now()}`,
+        time: 'Just now',
+        timestamp: new Date().toISOString(),
+        user: 'Farhad Abdollahi (Admin)',
+        action: 'Template Deleted',
+        type: 'Template Deleted' as any,
+        details: `Deleted template "${target.name}" (${target.category} / ${target.model}).`,
+        units: '-',
+      };
+      setAuditLogs((prev) => [newLog, ...prev]);
+      storageService.addAuditLog(newLog);
+    }
+  };
+
   // Handle saving template from Builder (writes to Server Disk JSON DB)
   const handleSaveTemplate = async (savedTemplate: ApplianceTemplate) => {
+    const isExisting = templates.some((t) => t.id === savedTemplate.id);
+
     setTemplates((prev) => {
       const exists = prev.some((t) => t.id === savedTemplate.id);
       if (exists) {
@@ -99,15 +130,18 @@ export default function App() {
       id: `log-${Date.now()}`,
       time: 'Just now',
       timestamp: new Date().toISOString(),
-      user: 'Farhad Abdollahi',
-      action: 'Template Saved',
-      type: 'Template Saved',
-      details: `Template "${savedTemplate.name}" configured with model ${savedTemplate.model}.`,
+      user: 'Farhad Abdollahi (Admin)',
+      action: isExisting ? 'Template Modified' : 'Template Created',
+      type: isExisting ? ('Template Modified' as any) : 'Template Saved',
+      details: isExisting
+        ? `Updated template "${savedTemplate.name}" (Model: ${savedTemplate.model}, Mode: ${savedTemplate.variableMode}).`
+        : `Created new template "${savedTemplate.name}" configured with model ${savedTemplate.model}.`,
       units: '-',
     };
     setAuditLogs((prev) => [newLog, ...prev]);
     storageService.addAuditLog(newLog);
 
+    setBuilderTemplate(null);
     setCurrentView('workspace');
   };
 
@@ -396,6 +430,13 @@ export default function App() {
               templates={templates}
               onSelectTemplate={handleSelectTemplate}
               onCreateNewTemplate={handleOpenNewTemplate}
+              onEditTemplate={handleEditTemplate}
+              onDeleteTemplate={handleDeleteTemplate}
+              userEmail={currentUserEmail}
+              completedGenerations={currentUserCompleted}
+              generationLimit={currentUserLimit}
+              allowUnlimited={currentUserUnlimited}
+              onNavigateToGovernance={() => setCurrentView('governance')}
             />
           )}
 
@@ -403,7 +444,10 @@ export default function App() {
             <TemplateBuilderView
               initialTemplate={builderTemplate}
               onSaveTemplate={handleSaveTemplate}
-              onCancel={() => setCurrentView('workspace')}
+              onCancel={() => {
+                setBuilderTemplate(null);
+                setCurrentView('workspace');
+              }}
             />
           )}
 
@@ -461,6 +505,7 @@ export default function App() {
         isOpen={isStudioModalOpen}
         onClose={() => setIsStudioModalOpen(false)}
         onAssetGenerated={handleAssetGenerated}
+        onEditTemplate={handleEditTemplate}
         userGenerationLimit={currentUserLimit}
         userCompletedGenerations={currentUserCompleted}
         userAllowUnlimited={currentUserUnlimited}

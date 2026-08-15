@@ -86,6 +86,23 @@ export const storageService = {
     return [];
   },
 
+  // Delete template from server disk
+  async deleteTemplate(templateId: string): Promise<ApplianceTemplate[]> {
+    try {
+      const res = await fetch(`/api/templates/${templateId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        const data = await res.json();
+        localStorage.setItem(CACHE_KEYS.TEMPLATES, JSON.stringify(data.templates));
+        return data.templates;
+      }
+    } catch (e) {
+      console.warn('Failed deleting template from server disk:', e);
+    }
+    return [];
+  },
+
   // Save generated asset to server disk
   async saveAsset(asset: GeneratedAsset): Promise<GeneratedAsset[]> {
     try {

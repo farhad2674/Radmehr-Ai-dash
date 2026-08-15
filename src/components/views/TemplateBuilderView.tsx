@@ -98,6 +98,60 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'modular' | 'raw'>('modular');
 
+  const isEditingExisting = !!initialTemplate?.id;
+
+  // Synchronize state when initialTemplate changes
+  useEffect(() => {
+    if (initialTemplate) {
+      setName(initialTemplate.name || '');
+      setCategory(initialTemplate.category || 'Smart Kitchen');
+      setModel(initialTemplate.model || 'nano-banana-2');
+      setDescription(
+        initialTemplate.description || 'Enterprise smart appliance prompt workflow with variable UI screen overlay and swappable object bindings.'
+      );
+      setApplianceObject(
+        initialTemplate.promptConfig?.applianceObject || 
+        initialTemplate.defaultApplianceObject || 
+        'four-door smart refrigerator'
+      );
+      setTitleOverlay(
+        initialTemplate.promptConfig?.titleOverlay || 
+        initialTemplate.defaultTitleOverlay || 
+        initialTemplate.defaultVariableValue || 
+        'Smart Inverter Tech - 2026 Edition'
+      );
+      setEnvironmentPlace(
+        initialTemplate.promptConfig?.environmentPlace || 
+        initialTemplate.defaultEnvironment || 
+        'bright modern minimalist Scandinavian kitchen with marble island'
+      );
+      setMoodLighting(
+        initialTemplate.promptConfig?.moodLighting || 
+        initialTemplate.defaultMoodLighting || 
+        'soft natural daylight streaming through floor-to-ceiling windows'
+      );
+      setColorMaterial(
+        initialTemplate.promptConfig?.colorMaterial || 
+        initialTemplate.defaultColorMaterial || 
+        'brushed stainless steel with subtle ice-blue LED accent lines'
+      );
+      setVariableMode(initialTemplate.variableMode || 'both_object_and_title');
+      setBasePrompt(
+        initialTemplate.basePrompt ||
+        'A sleek, luxury {{OBJECT}} situated in {{ENVIRONMENT}}. The exterior finish features {{COLOR_FINISH}}. An illuminated interactive touch display clearly shows title: {{TEXT_ZONE}}. Rendered in {{LIGHTING}}, architectural photography style, 8k resolution, crisp photorealistic reflections.'
+      );
+      setThumbnailUrl(
+        initialTemplate.thumbnailUrl ||
+        'https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?auto=format&fit=crop&w=1000&q=80'
+      );
+      setIsPublic(initialTemplate.isPublic ?? true);
+      setRequireApproval(initialTemplate.requireApproval ?? false);
+      setPermText1(initialTemplate.fieldPermissions?.text1 ?? true);
+      setPermStyleRef(initialTemplate.fieldPermissions?.styleReferenceImg ?? true);
+      setPermTargetAudience(initialTemplate.fieldPermissions?.targetAudience ?? false);
+    }
+  }, [initialTemplate]);
+
   // Quick preset pills for Appliance Object
   const appliancePresets = [
     'four-door smart refrigerator',
@@ -262,14 +316,25 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
       {/* Top Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#E0E2EC] pb-5">
         <div>
-          <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-[#191c23] flex items-center gap-2.5">
-            Template Builder
-            <span className="text-xs px-3 py-1 rounded-full bg-blue-50 text-[#1A73E8] border border-blue-200/60 font-medium">
-              Modular Prompt & Variable Engine
-            </span>
-          </h2>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-[#191c23]">
+              {isEditingExisting ? `Edit Template` : 'Template Builder'}
+            </h2>
+            {isEditingExisting ? (
+              <span className="text-xs px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-300/70 font-semibold flex items-center gap-1.5 shadow-xs">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse" />
+                Editing: {initialTemplate?.name}
+              </span>
+            ) : (
+              <span className="text-xs px-3 py-1 rounded-full bg-blue-50 text-[#1A73E8] border border-blue-200/60 font-medium">
+                Modular Prompt & Variable Engine
+              </span>
+            )}
+          </div>
           <p className="text-sm text-[#5F6368] mt-1">
-            Configure reference appliances, environments, lighting, title overlays, and granular user customization locks.
+            {isEditingExisting
+              ? `Update reference prompts, default object placeholders, lighting, and variable permissions for ${initialTemplate?.name}.`
+              : 'Configure reference appliances, environments, lighting, title overlays, and granular user customization locks.'}
           </p>
         </div>
 
@@ -288,8 +353,20 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
             onClick={handleSave}
             className="px-6 py-2.5 rounded-full bg-[#1A73E8] hover:bg-[#1557B0] active:scale-[0.99] text-white text-xs font-semibold shadow-xs flex items-center gap-2 transition-all cursor-pointer"
           >
-            {saveSuccess ? <Check className="w-4 h-4 text-white" /> : <Save className="w-4 h-4" />}
-            <span>{saveSuccess ? 'Template Saved!' : 'Save Template'}</span>
+            {saveSuccess ? (
+              <Check className="w-4 h-4 text-white" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
+            <span>
+              {saveSuccess
+                ? isEditingExisting
+                  ? 'Template Updated!'
+                  : 'Template Saved!'
+                : isEditingExisting
+                ? 'Update Template'
+                : 'Save Template'}
+            </span>
           </button>
         </div>
       </div>
