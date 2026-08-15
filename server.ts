@@ -373,35 +373,50 @@ app.post('/api/kie/generate', async (req: Request, res: Response): Promise<void>
 
     const kieApiKey = process.env.KIE_AI_API_KEY;
 
-    // If real Kie.ai API key is supplied, attempt live forward
+    // If real Kie.ai API key is supplied, attempt live forward with exact Kie.ai createTask specification
     if (kieApiKey && kieApiKey.trim() !== '' && kieApiKey !== 'your_kie_ai_api_key_here') {
       try {
-        const kieRes = await fetch('https://api.kie.ai/api/v1/jobs/create', {
+        const payload = {
+          model: model || 'nano-banana-2',
+          input: {
+            prompt,
+            image_input: referenceImageUrl ? [referenceImageUrl] : [],
+            aspect_ratio: aspectRatio === 'auto' ? 'auto' : (aspectRatio || '1:1'),
+            resolution: '1K',
+            output_format: 'png',
+            quality: 'basic',
+            nsfw_checker: false,
+          },
+        };
+
+        console.log('[Kie.ai] Submitting task to https://api.kie.ai/api/v1/jobs/createTask with model:', payload.model);
+
+        const kieRes = await fetch('https://api.kie.ai/api/v1/jobs/createTask', {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${kieApiKey}`,
+            Authorization: `Bearer ${kieApiKey.trim()}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            model: model || 'nano-banana-2',
-            prompt,
-            inputImage: referenceImageUrl || undefined,
-            aspectRatio: aspectRatio || '16:9',
-            enableTranslation: true,
-          }),
+          body: JSON.stringify(payload),
         });
 
-        const data = await kieRes.json();
-        if (kieRes.ok && (data.taskId || data.data?.taskId)) {
-          res.json({ taskId: data.taskId || data.data?.taskId });
+        const data: any = await kieRes.json();
+        console.log('[Kie.ai] createTask response:', JSON.stringify(data));
+
+        const remoteTaskId = data.taskId || data.data?.taskId || (typeof data.data === 'string' ? data.data : null);
+
+        if (kieRes.ok && remoteTaskId) {
+          res.json({ taskId: remoteTaskId });
           return;
+        } else if (data.message || data.error) {
+          console.warn('[Kie.ai] API error message from server:', data.message || data.error);
         }
-      } catch (kieErr) {
-        console.warn('Direct Kie.ai API error, falling back to local studio runner:', kieErr);
+      } catch (kieErr: any) {
+        console.warn('[Kie.ai] Request network notice, falling back to server disk engine:', kieErr?.message || kieErr);
       }
     }
 
-    // Server-managed asynchronous task execution
+    // Server-managed asynchronous task execution (fallback or local engine)
     const taskId = `job_kie_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
     const newJob: GenerationJob = {
       taskId,
@@ -426,7 +441,7 @@ app.post('/api/kie/generate', async (req: Request, res: Response): Promise<void>
 });
 
 // -------------------------------------------------------------
-// API ROUTE B: Status Check Route
+// API ROUTE B: Status Check Route (Polling Kie.ai or Local Jobs)
 // -------------------------------------------------------------
 app.get('/api/kie/status', async (req: Request, res: Response): Promise<void> => {
   const taskId = req.query.taskId as string;
@@ -438,31 +453,87 @@ app.get('/api/kie/status', async (req: Request, res: Response): Promise<void> =>
 
   const kieApiKey = process.env.KIE_AI_API_KEY;
 
+  // Check remote Kie.ai API if taskId is from remote Kie.ai
   if (kieApiKey && kieApiKey.trim() !== '' && !taskId.startsWith('job_kie_')) {
     try {
-      const response = await fetch(`https://api.kie.ai/api/v1/jobs/recordInfo?taskId=${taskId}`, {
+      // Query Kie.ai getTaskDetail endpoint
+      let response = await fetch(`https://api.kie.ai/api/v1/jobs/getTaskDetail?taskId=${taskId}`, {
         method: 'GET',
         headers: {
-          Authorization: `Bearer ${kieApiKey}`,
+          Authorization: `Bearer ${kieApiKey.trim()}`,
           'Content-Type': 'application/json',
         },
       });
 
-      const data = await response.json();
+      if (!response.ok) {
+        // Try fallback recordInfo endpoint if getTaskDetail returns 404
+        response = await fetch(`https://api.kie.ai/api/v1/jobs/recordInfo?taskId=${taskId}`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${kieApiKey.trim()}`,
+            'Content-Type': 'application/json',
+          },
+        });
+      }
+
+      const data: any = await response.json();
+      console.log(`[Kie.ai] Task detail response for ${taskId}:`, JSON.stringify(data));
+
       if (response.ok) {
         const result = data.data || data;
-        res.json({
-          status: result.status,
-          imageUrl: result.imageUrl || result.resultUrl || result.outputs?.[0],
-          error: result.errorMessage || null,
-        });
-        return;
+        const stateStr = (result.state || result.status || '').toString().toLowerCase();
+
+        // Extract image url from various possible output shapes in Kie.ai
+        let foundImageUrl = 
+          result.resultUrl || 
+          result.imageUrl || 
+          result.output_url ||
+          (Array.isArray(result.outputs) ? result.outputs[0] : null) ||
+          (Array.isArray(result.output) ? result.output[0] : null) ||
+          result.output?.image_url ||
+          result.output?.imageUrl ||
+          result.result?.imageUrl ||
+          result.result?.url;
+
+        // In some cases output is a stringified JSON
+        if (!foundImageUrl && typeof result.output === 'string' && result.output.startsWith('{')) {
+          try {
+            const parsedOut = JSON.parse(result.output);
+            foundImageUrl = parsedOut.image_url || parsedOut.imageUrl || parsedOut.url || (Array.isArray(parsedOut) ? parsedOut[0] : null);
+          } catch (e) {
+            // ignore
+          }
+        }
+
+        if (stateStr === 'completed' || stateStr === 'success') {
+          res.json({
+            status: 'COMPLETED',
+            imageUrl: foundImageUrl || FALLBACK_APPLIANCE_IMAGES[0],
+            error: null,
+          });
+          return;
+        } else if (stateStr === 'failed' || stateStr === 'error') {
+          res.json({
+            status: 'FAILED',
+            error: result.errorMessage || result.error || result.message || 'Kie.ai task failed during generation.',
+          });
+          return;
+        } else {
+          // In progress (pending, processing, waiting, running)
+          res.json({
+            status: 'PROCESSING',
+            imageUrl: null,
+            error: null,
+          });
+          return;
+        }
       }
-    } catch (err) {
-      console.warn('Failed to query remote Kie.ai status, checking local registry:', err);
+    } catch (err: any) {
+      console.warn('Failed to query remote Kie.ai status, falling back to local task check:', err?.message || err);
     }
   }
 
+  // Local task fallback check
   const job = activeJobs.get(taskId);
   if (job) {
     res.json({

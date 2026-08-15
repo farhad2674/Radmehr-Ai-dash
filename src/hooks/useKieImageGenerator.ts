@@ -61,9 +61,8 @@ export function useKieImageGenerator(): UseKieImageGeneratorResult {
         setTaskId(currentTaskId);
         setStatus('PROCESSING');
 
-        // Step 2: Poll every 5 seconds until COMPLETED or FAILED
+        // Step 2: Poll every 3 seconds until COMPLETED or FAILED
         return new Promise<string | null>((resolve, reject) => {
-          // Immediately perform an initial status poll after 1s then loop every 5s
           const checkStatus = async () => {
             try {
               const statusRes = await fetch(`/api/kie/status?taskId=${currentTaskId}`);
@@ -101,7 +100,9 @@ export function useKieImageGenerator(): UseKieImageGeneratorResult {
             }
           };
 
-          pollTimerRef.current = setInterval(checkStatus, 5000);
+          // Initial check after 1.5s
+          setTimeout(checkStatus, 1500);
+          pollTimerRef.current = setInterval(checkStatus, 3500);
         });
       } catch (err: any) {
         cancelPolling();
