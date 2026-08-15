@@ -1,0 +1,6 @@
+{
+  "name": "RadmehrAI Studio",
+  "description": "Enterprise AI Admin Studio & Appliance Image Generation Engine with per-user generation quota limits, Template Builder, Governance, and Polling Generator.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
