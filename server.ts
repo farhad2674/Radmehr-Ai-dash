@@ -384,18 +384,20 @@ app.post('/api/kie/generate', async (req: Request, res: Response): Promise<void>
     // If real Kie.ai API key is supplied, attempt live forward with exact Kie.ai createTask specification
     if (kieApiKey && kieApiKey.trim() !== '' && kieApiKey !== 'your_kie_ai_api_key_here') {
       try {
-        const payload = {
+        const payload: any = {
           model: model || 'nano-banana-2',
           input: {
             prompt,
             image_input: referenceImageUrl ? [referenceImageUrl] : [],
             aspect_ratio: aspectRatio === 'auto' ? 'auto' : (aspectRatio || '1:1'),
             resolution: '1K',
-            output_format: 'png',
-            quality: 'basic',
-            nsfw_checker: false,
-          },
+            output_format: 'png'
+          }
         };
+
+        if (process.env.APP_URL) {
+          payload.callBackUrl = `${process.env.APP_URL.replace(/\/$/, '')}/api/kie/callback`;
+        }
 
         console.log('[Kie.ai] Submitting task to https://api.kie.ai/api/v1/jobs/createTask with model:', payload.model);
 
@@ -414,6 +416,15 @@ app.post('/api/kie/generate', async (req: Request, res: Response): Promise<void>
         const remoteTaskId = data.taskId || data.data?.taskId || (typeof data.data === 'string' ? data.data : null);
 
         if (kieRes.ok && remoteTaskId) {
+          activeJobs.set(remoteTaskId, {
+            taskId: remoteTaskId,
+            prompt,
+            model: model || 'nano-banana-2',
+            aspectRatio: aspectRatio || '16:9',
+            referenceImageUrl,
+            status: 'PROCESSING',
+            createdAt: Date.now(),
+          });
           res.json({ taskId: remoteTaskId });
           return;
         } else if (data.message || data.error) {
@@ -445,6 +456,60 @@ app.post('/api/kie/generate', async (req: Request, res: Response): Promise<void>
   } catch (error: any) {
     console.error('Generate API error:', error);
     res.status(500).json({ error: error?.message || 'Internal server error' });
+  }
+});
+
+// -------------------------------------------------------------
+// API ROUTE: Kie.ai Webhook Callback
+// -------------------------------------------------------------
+app.post('/api/kie/callback', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const payload = req.body;
+    console.log('[Kie.ai Webhook] Received callback:', JSON.stringify(payload));
+    
+    if (payload && payload.data && payload.data.taskId) {
+      const taskId = payload.data.taskId;
+      const stateStr = (payload.data.state || '').toString().toLowerCase();
+      
+      const job = activeJobs.get(taskId);
+      if (!job) {
+        console.log(`[Kie.ai Webhook] Job ${taskId} not found in memory`);
+        res.status(200).json({ received: true });
+        return;
+      }
+
+      if (stateStr === 'success' || stateStr === 'completed') {
+        let foundImageUrl: string | null = null;
+        if (payload.data.resultJson) {
+           try {
+             const parsedResult = typeof payload.data.resultJson === 'string' ? JSON.parse(payload.data.resultJson) : payload.data.resultJson;
+             if (parsedResult.resultUrls && Array.isArray(parsedResult.resultUrls) && parsedResult.resultUrls.length > 0) {
+               foundImageUrl = parsedResult.resultUrls[0];
+             }
+           } catch (e) {
+             console.warn('[Kie.ai Webhook] Failed parsing resultJson');
+           }
+        }
+        
+        if (foundImageUrl) {
+           cacheRemoteImageToDisk(foundImageUrl, 'kie_market').then(diskUrl => {
+             job.imageUrl = diskUrl;
+             job.status = 'COMPLETED';
+             job.completedAt = Date.now();
+           });
+        } else {
+           job.status = 'FAILED';
+           job.error = 'No image URL found in callback';
+        }
+      } else if (stateStr === 'fail' || stateStr === 'failed' || stateStr === 'error') {
+         job.status = 'FAILED';
+         job.error = payload.msg || 'Task failed according to callback';
+      }
+    }
+    res.status(200).json({ received: true });
+  } catch (err: any) {
+    console.error('[Kie.ai Webhook] Error processing callback:', err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -482,7 +547,18 @@ app.get('/api/kie/status', async (req: Request, res: Response): Promise<void> =>
 
   const kieApiKey = process.env.KIE_AI_API_KEY;
 
-  // Check remote Kie.ai API if taskId is from remote Kie.ai
+  // 1. Check local job state first (it might have been updated by the webhook callback)
+  const job = activeJobs.get(taskId);
+  if (job && (job.status === 'COMPLETED' || job.status === 'FAILED')) {
+    res.json({
+      status: fallbackJob.status,
+      imageUrl: fallbackJob.imageUrl,
+      error: fallbackJob.error || null,
+    });
+    return;
+  }
+
+  // 2. Check remote Kie.ai API if taskId is from remote Kie.ai and not yet completed
   if (kieApiKey && kieApiKey.trim() !== '' && !taskId.startsWith('job_kie_')) {
     try {
       // Primary OpenAPI unified query endpoint for Market models: /api/v1/jobs/recordInfo?taskId=...
@@ -597,8 +673,8 @@ app.get('/api/kie/status', async (req: Request, res: Response): Promise<void> =>
   }
 
   // Local task fallback check
-  const job = activeJobs.get(taskId);
-  if (job) {
+  const fallbackJob = activeJobs.get(taskId);
+  if (fallbackJob) {
     res.json({
       status: job.status,
       imageUrl: job.imageUrl,
