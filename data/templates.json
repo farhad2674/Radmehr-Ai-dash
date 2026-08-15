@@ -1,0 +1,293 @@
+[
+  {
+    "id": "tmpl-fridge-smart",
+    "name": "Smart Kitchen: Swappable Appliance (Object-Only Mode)",
+    "category": "Smart Kitchen",
+    "model": "sedance-2.5-pro",
+    "description": "High-end minimalist Nordic kitchen with soft daylight. Users can swap the reference object (e.g. Refrigerator to Laundry / Washer or Espresso Maker) while keeping the mood, place, and lighting fixed.",
+    "basePrompt": "A sleek, luxury {{OBJECT}} in a modern minimalist kitchen, brushed stainless steel finish with subtle LED accent lines. The appliance features an illuminated interactive touch display showing: {{TEXT_ZONE}}. Soft natural daylight, marble kitchen island, architectural photography style, 8k resolution, crisp photorealistic reflections.",
+    "variableMode": "object_only",
+    "promptConfig": {
+      "applianceObject": "four-door smart refrigerator",
+      "environmentPlace": "bright modern minimalist Scandinavian kitchen with marble island",
+      "moodLighting": "soft natural daylight with crisp architectural reflections",
+      "colorMaterial": "brushed stainless steel with subtle ice-blue LED accents",
+      "titleOverlay": "Inventory Sync • Freshness Index 98%"
+    },
+    "defaultVariableValue": "Inventory Sync • Freshness Index 98%",
+    "defaultApplianceObject": "four-door smart refrigerator",
+    "defaultTitleOverlay": "Inventory Sync • Freshness Index 98%",
+    "defaultEnvironment": "bright modern minimalist Scandinavian kitchen with marble island",
+    "defaultMoodLighting": "soft natural daylight with crisp architectural reflections",
+    "defaultColorMaterial": "brushed stainless steel with subtle ice-blue LED accents",
+    "thumbnailUrl": "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=1000&q=80",
+    "isPublic": true,
+    "requireApproval": false,
+    "fieldPermissions": {
+      "text1": false,
+      "targetAudience": false,
+      "styleReferenceImg": true,
+      "applianceObject": true,
+      "environment": false,
+      "lighting": false
+    },
+    "tags": [
+      "Kitchen",
+      "SwappableObject",
+      "SmartHome",
+      "Appliance"
+    ],
+    "createdAt": "2026-08-10",
+    "author": "Elena Carter"
+  },
+  {
+    "id": "tmpl-fridge-title-only",
+    "name": "Smart Refrigerator: Title-Only Customizer",
+    "category": "Smart Kitchen",
+    "model": "sedance-2.5-pro",
+    "description": "Fixed luxury refrigerator render with locked studio lighting, place, and colors. Users can ONLY customize the title / text overlay in the image.",
+    "basePrompt": "A sleek, luxury four-door smart refrigerator in a bright modern kitchen, brushed stainless steel finish with subtle blue LED accent lines. The right-side French door features an illuminated flush-mounted interactive touch display showing: {{TEXT_ZONE}}. Soft natural daylight, marble kitchen island, architectural photography style, 8k resolution, crisp photorealistic reflections.",
+    "variableMode": "title_only",
+    "promptConfig": {
+      "applianceObject": "luxury four-door smart refrigerator",
+      "environmentPlace": "modern architectural kitchen with waterfall marble island",
+      "moodLighting": "warm morning sunlight streaming through panoramic windows",
+      "colorMaterial": "brushed dark titanium with illuminated cyan telemetry rings",
+      "titleOverlay": "Titanium Pure Cold • Smart Inverter 2026"
+    },
+    "defaultVariableValue": "Titanium Pure Cold • Smart Inverter 2026",
+    "defaultApplianceObject": "luxury four-door smart refrigerator",
+    "defaultTitleOverlay": "Titanium Pure Cold • Smart Inverter 2026",
+    "defaultEnvironment": "modern architectural kitchen with waterfall marble island",
+    "defaultMoodLighting": "warm morning sunlight streaming through panoramic windows",
+    "defaultColorMaterial": "brushed dark titanium with illuminated cyan telemetry rings",
+    "thumbnailUrl": "https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&w=1000&q=80",
+    "isPublic": true,
+    "requireApproval": false,
+    "fieldPermissions": {
+      "text1": true,
+      "targetAudience": false,
+      "styleReferenceImg": false,
+      "applianceObject": false,
+      "environment": false,
+      "lighting": false
+    },
+    "tags": [
+      "TitleOnly",
+      "Refrigerator",
+      "BrandDisplay",
+      "SmartKitchen"
+    ],
+    "createdAt": "2026-08-11",
+    "author": "Elena Carter"
+  },
+  {
+    "id": "tmpl-both-object-title",
+    "name": "Modular Studio: Object + Title Customizer",
+    "category": "Smart Kitchen",
+    "model": "nano-banana-2",
+    "description": "Full modular flexibility allowing users to change both the appliance object (Refrigerator, Laundry Machine, Oven, etc.) AND the title overlay while maintaining studio lighting.",
+    "basePrompt": "A high-end commercial {{OBJECT}} situated in a luxury architectural setting. The prominent digital touch interface clearly displays: {{TEXT_ZONE}}. Balanced studio rim lighting, 8k crisp product render, brushed metallic textures, photorealistic reflections.",
+    "variableMode": "both_object_and_title",
+    "promptConfig": {
+      "applianceObject": "front-load eco-cotton washing machine",
+      "environmentPlace": "minimalist architectural laundry and utility suite",
+      "moodLighting": "high-contrast studio rim lighting and soft reflections",
+      "colorMaterial": "matte graphite and brushed chrome trim",
+      "titleOverlay": "Eco Silent Wash • 1200 RPM • AI Load 64%"
+    },
+    "defaultVariableValue": "Eco Silent Wash • 1200 RPM • AI Load 64%",
+    "defaultApplianceObject": "front-load eco-cotton washing machine",
+    "defaultTitleOverlay": "Eco Silent Wash • 1200 RPM • AI Load 64%",
+    "defaultEnvironment": "minimalist architectural laundry and utility suite",
+    "defaultMoodLighting": "high-contrast studio rim lighting and soft reflections",
+    "defaultColorMaterial": "matte graphite and brushed chrome trim",
+    "thumbnailUrl": "https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?auto=format&fit=crop&w=1000&q=80",
+    "isPublic": true,
+    "requireApproval": false,
+    "fieldPermissions": {
+      "text1": true,
+      "targetAudience": false,
+      "styleReferenceImg": true,
+      "applianceObject": true,
+      "environment": false,
+      "lighting": false
+    },
+    "tags": [
+      "Modular",
+      "ObjectAndTitle",
+      "Laundry",
+      "Kitchen"
+    ],
+    "createdAt": "2026-08-12",
+    "author": "Marcus Wright"
+  },
+  {
+    "id": "tmpl-thermostat-hvac",
+    "name": "Smart HVAC Holographic Wall Controller",
+    "category": "Climate Control",
+    "model": "nano-banana-2",
+    "description": "Glass-morphism smart home wall panel displaying ambient temperature, indoor air quality metrics, and zone controls.",
+    "basePrompt": "A premium smart home wall control panel floating on a minimalist textured wall in a sunlit modern interior. Clean UI interface on high-contrast frosted glass display rendering: {{TEXT_ZONE}}. Crisp circular temperature gauge at 21.5°C, fan speed 3, humidity 45%, air quality index excellent. Soft bokeh studio background, hyper-detailed product visualization.",
+    "variableMode": "title_only",
+    "defaultVariableValue": "RadmehrAI Living Zone • Climate Balanced 21.5°C • Eco Mode Active",
+    "defaultApplianceObject": "holographic smart wall thermostat",
+    "defaultTitleOverlay": "RadmehrAI Living Zone • Climate Balanced 21.5°C • Eco Mode Active",
+    "thumbnailUrl": "https://images.unsplash.com/photo-1545259741-2ea3ebf61fa3?auto=format&fit=crop&w=1000&q=80",
+    "isPublic": true,
+    "requireApproval": true,
+    "fieldPermissions": {
+      "text1": true,
+      "targetAudience": true,
+      "styleReferenceImg": false,
+      "applianceObject": false,
+      "environment": false,
+      "lighting": false
+    },
+    "tags": [
+      "HVAC",
+      "Thermostat",
+      "Wall Panel",
+      "Climate"
+    ],
+    "createdAt": "2026-08-11",
+    "author": "Sarah Connor"
+  },
+  {
+    "id": "tmpl-robot-vacuum",
+    "name": "Autonomous LiDAR Smart Vacuum & SLAM Mapping",
+    "category": "Home Automation",
+    "model": "nano-banana-2",
+    "description": "Autonomous circular robot vacuum cleaner navigating a Scandinavian living room with active LiDAR sensor glow.",
+    "basePrompt": "An ultra-sleek matte white autonomous robot vacuum cleaner gliding over light oak hardwood floor and textured wool rug in a modern living room. The device top features glowing laser navigation sensors with clean HUD overlay text: {{TEXT_ZONE}}. Sunlight streaming through sheer curtains, photorealistic render, architectural digest aesthetic.",
+    "variableMode": "both_object_and_title",
+    "defaultVariableValue": "Status: Navigating & 3D Mapping • Battery 88% • Efficiency: High",
+    "defaultApplianceObject": "matte white autonomous robot vacuum cleaner with LiDAR",
+    "defaultTitleOverlay": "Status: Navigating & 3D Mapping • Battery 88% • Efficiency: High",
+    "thumbnailUrl": "https://images.unsplash.com/photo-1558317374-067fb5f30001?auto=format&fit=crop&w=1000&q=80",
+    "isPublic": true,
+    "requireApproval": false,
+    "fieldPermissions": {
+      "text1": true,
+      "targetAudience": false,
+      "styleReferenceImg": true,
+      "applianceObject": true,
+      "environment": false,
+      "lighting": false
+    },
+    "tags": [
+      "Robotics",
+      "Cleaning",
+      "Autonomous",
+      "Sensors"
+    ],
+    "createdAt": "2026-08-12",
+    "author": "Marcus Wright"
+  },
+  {
+    "id": "tmpl-washer-dryer",
+    "name": "Smart Eco-Cotton Washing Machine Telemetry",
+    "category": "Laundry AI",
+    "model": "sedance-2.5-pro",
+    "description": "Front-load graphite smart washing machine with high-resolution digital jog dial and cycle optimization graph.",
+    "basePrompt": "A high-end dark titanium front-load washing machine in a minimalist modern laundry room. Close-up on the tactile metallic rotary dial and illuminated capacitive screen showing cycle telemetry: {{TEXT_ZONE}}. Water droplet textures on glass door, studio rim lighting, 8k crisp product render, photorealistic materials.",
+    "variableMode": "title_only",
+    "defaultVariableValue": "AI Cycle Analysis: Eco Cotton Pro • Temp 40°C • 1200 RPM • Load 64%",
+    "defaultApplianceObject": "dark titanium front-load washing machine",
+    "defaultTitleOverlay": "AI Cycle Analysis: Eco Cotton Pro • Temp 40°C • 1200 RPM • Load 64%",
+    "thumbnailUrl": "https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?auto=format&fit=crop&w=1000&q=80",
+    "isPublic": true,
+    "requireApproval": false,
+    "fieldPermissions": {
+      "text1": true,
+      "targetAudience": false,
+      "styleReferenceImg": true,
+      "applianceObject": false,
+      "environment": false,
+      "lighting": false
+    },
+    "tags": [
+      "Laundry",
+      "Washer",
+      "Telemetry",
+      "Touchscreen"
+    ],
+    "createdAt": "2026-08-13",
+    "author": "Elena Carter"
+  },
+  {
+    "id": "tmpl-espresso-barista",
+    "name": "Espresso Pro Barista Machine with Digital Dial",
+    "category": "Kitchen Luxury",
+    "model": "Midjourney v6",
+    "description": "Polished chrome commercial countertop espresso machine with dual boiler pressure gauges and steam wand.",
+    "basePrompt": "An artisan stainless steel and white enamel commercial espresso machine on a terrazzo kitchen countertop next to a ceramic cup of latte with rosette art. Front digital display and pressure gauges showing: {{TEXT_ZONE}}. Warm cafe morning light, steam rising gently, luxury product photography, ultra-realistic metal reflections.",
+    "defaultVariableValue": "9.2 Bar Extraction • 93.5°C Group Head • Pre-Infusion Active",
+    "thumbnailUrl": "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=1000&q=80",
+    "isPublic": true,
+    "requireApproval": false,
+    "fieldPermissions": {
+      "text1": true,
+      "targetAudience": false,
+      "styleReferenceImg": false
+    },
+    "tags": [
+      "Espresso",
+      "Coffee",
+      "Luxury",
+      "Kitchen"
+    ],
+    "createdAt": "2026-08-14",
+    "author": "Samira Croft"
+  },
+  {
+    "id": "tmpl-smart-oven",
+    "name": "Smart Built-in Convection Wall Oven",
+    "category": "Smart Kitchen",
+    "model": "sedance-2.5-pro",
+    "description": "Black glass and brushed bronze built-in wall oven with full-width touchscreen and camera view.",
+    "basePrompt": "A built-in luxury black mirror glass convection oven seamlessly integrated into custom rift-sawn oak kitchen cabinetry. The full-width top touch display glows with interface: {{TEXT_ZONE}}. Interior cavity gently illuminated with golden baking light, photorealistic, interior design photography.",
+    "defaultVariableValue": "Precision Bake: 350°F • AI Crust Browning Sensor • 14m Remaining",
+    "thumbnailUrl": "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1000&q=80",
+    "isPublic": true,
+    "requireApproval": false,
+    "fieldPermissions": {
+      "text1": true,
+      "targetAudience": false,
+      "styleReferenceImg": true
+    },
+    "tags": [
+      "Oven",
+      "Convection",
+      "Bake",
+      "Appliance"
+    ],
+    "createdAt": "2026-08-14",
+    "author": "Marcus Hale"
+  },
+  {
+    "id": "tmpl-dishwasher-compact",
+    "name": "Compact Ultrasonic Countertop Dishwasher",
+    "category": "Smart Kitchen",
+    "model": "nano-banana-2",
+    "description": "Minimalist Japanese aesthetic compact dishwasher with soft rounded corners and ambient LED status ring.",
+    "basePrompt": "A modern matte cream compact countertop dishwasher on a white marble kitchen island. Elegant rounded chassis with minimalist status LED ring and clean label reading: {{TEXT_ZONE}}. Soft warm daylight, glass cup and ceramic bowl beside it, high fidelity 3D product render.",
+    "defaultVariableValue": "Ultrasonic UV-C Sanitize • 32 Min Express Cycle • Eco Level A+++",
+    "thumbnailUrl": "https://images.unsplash.com/photo-1585837575652-267c041d77d4?auto=format&fit=crop&w=1000&q=80",
+    "isPublic": true,
+    "requireApproval": false,
+    "fieldPermissions": {
+      "text1": true,
+      "targetAudience": false,
+      "styleReferenceImg": false
+    },
+    "tags": [
+      "Dishwasher",
+      "Compact",
+      "Ultrasonic",
+      "Sanitize"
+    ],
+    "createdAt": "2026-08-15",
+    "author": "Sarah Connor"
+  }
+]

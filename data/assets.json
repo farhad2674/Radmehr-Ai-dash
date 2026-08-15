@@ -1,0 +1,142 @@
+[
+  {
+    "id": "asset_1786802159160",
+    "templateId": "tmpl-fridge-smart",
+    "templateName": "Smart Kitchen: Swappable Appliance (Object-Only Mode)",
+    "prompt": "A sleek, luxury four-door smart refrigerator in a modern minimalist kitchen, brushed stainless steel finish with subtle LED accent lines. The appliance features an illuminated interactive touch display showing: Inventory Sync • Freshness Index 98%. Soft natural daylight, marble kitchen island, architectural photography style, 8k resolution, crisp photorealistic reflections.",
+    "model": "sedance-2.5-pro",
+    "imageUrl": "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=1200&q=80",
+    "aspectRatio": "16:9",
+    "creator": {
+      "name": "Farhad Abdollahi",
+      "role": "Enterprise AI Admin",
+      "email": "farhad.abdollahi28@gmail.com",
+      "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80"
+    },
+    "createdAt": "2026-08-15T13:55:59.160Z",
+    "timeAgo": "Just now",
+    "likes": 1,
+    "bookmarked": true,
+    "unitsUsed": 24
+  },
+  {
+    "id": "asset-1",
+    "templateId": "tmpl-fridge-smart",
+    "templateName": "Smart Multi-Door Refrigerator UI",
+    "prompt": "Matte black modern smart refrigerator in a luxury kitchen with smart screen showing interactive meal planning.",
+    "model": "SDXL",
+    "imageUrl": "https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&w=1200&q=80",
+    "aspectRatio": "16:9",
+    "creator": {
+      "name": "Alex Mercer",
+      "role": "Enterprise AI Admin",
+      "email": "alex.m@radmehrai.com",
+      "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80"
+    },
+    "createdAt": "2026-08-15T02:13:00Z",
+    "timeAgo": "2 hours ago",
+    "likes": 42,
+    "bookmarked": true,
+    "unitsUsed": 24
+  },
+  {
+    "id": "asset-2",
+    "templateId": "tmpl-espresso-barista",
+    "templateName": "Espresso Pro Barista Machine with Digital Dial",
+    "prompt": "White enamel and chrome barista coffee machine on terrazzo counter with latte art.",
+    "model": "Midjourney v6",
+    "imageUrl": "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=1200&q=80",
+    "aspectRatio": "16:9",
+    "creator": {
+      "name": "Samira Croft",
+      "role": "Supervisor",
+      "email": "samira.c@radmehrai.com",
+      "avatar": "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=200&q=80"
+    },
+    "createdAt": "2026-08-14T23:13:00Z",
+    "timeAgo": "5 hours ago",
+    "likes": 28,
+    "bookmarked": false,
+    "unitsUsed": 24
+  },
+  {
+    "id": "asset-3",
+    "templateId": "tmpl-fridge-smart",
+    "templateName": "Smart Multi-Door Refrigerator UI",
+    "prompt": "French door slate gray smart refrigerator in high end penthouse kitchen with recipe dashboard.",
+    "model": "sedance-2.5-pro",
+    "imageUrl": "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=1200&q=80",
+    "aspectRatio": "16:9",
+    "creator": {
+      "name": "Elena Carter",
+      "role": "Supervisor",
+      "email": "elena.c@radmehrai.com",
+      "avatar": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80"
+    },
+    "createdAt": "2026-08-14T18:00:00Z",
+    "timeAgo": "10 hours ago",
+    "likes": 19,
+    "bookmarked": true,
+    "unitsUsed": 24
+  },
+  {
+    "id": "asset-4",
+    "templateId": "tmpl-washer-dryer",
+    "templateName": "Smart Eco-Cotton Washing Machine Telemetry",
+    "prompt": "Graphite metallic front load washer with glowing blue cycle telemetry in contemporary Scandinavian home.",
+    "model": "nano-banana-2",
+    "imageUrl": "https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?auto=format&fit=crop&w=1200&q=80",
+    "aspectRatio": "16:9",
+    "creator": {
+      "name": "Marcus Wright",
+      "role": "Data Scientist",
+      "email": "marcus.w@radmehrai.com",
+      "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80"
+    },
+    "createdAt": "2026-08-14T12:00:00Z",
+    "timeAgo": "16 hours ago",
+    "likes": 31,
+    "bookmarked": false,
+    "unitsUsed": 24
+  },
+  {
+    "id": "asset-5",
+    "templateId": "tmpl-smart-oven",
+    "templateName": "Smart Built-in Convection Wall Oven",
+    "prompt": "Built-in black glass convection oven with smart touch display reading 350°F bake in wooden kitchen.",
+    "model": "sedance-2.5-pro",
+    "imageUrl": "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1200&q=80",
+    "aspectRatio": "16:9",
+    "creator": {
+      "name": "Marcus Hale",
+      "role": "Manager",
+      "email": "marcus.h@radmehrai.com",
+      "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80"
+    },
+    "createdAt": "2026-08-13T20:00:00Z",
+    "timeAgo": "1 day ago",
+    "likes": 15,
+    "bookmarked": true,
+    "unitsUsed": 24
+  },
+  {
+    "id": "asset-6",
+    "templateId": "tmpl-dishwasher-compact",
+    "templateName": "Compact Ultrasonic Countertop Dishwasher",
+    "prompt": "Minimalist compact countertop dishwasher with ambient LED status on marble kitchen.",
+    "model": "nano-banana-2",
+    "imageUrl": "https://images.unsplash.com/photo-1585837575652-267c041d77d4?auto=format&fit=crop&w=1200&q=80",
+    "aspectRatio": "16:9",
+    "creator": {
+      "name": "Sarah Connor",
+      "role": "Lead Orchestrator",
+      "email": "sarah.connor@radmehrai.com",
+      "avatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80"
+    },
+    "createdAt": "2026-08-13T14:00:00Z",
+    "timeAgo": "2 days ago",
+    "likes": 22,
+    "bookmarked": false,
+    "unitsUsed": 24
+  }
+]

@@ -22,7 +22,7 @@ export const INITIAL_TEMPLATES: ApplianceTemplate[] = [
     defaultEnvironment: 'bright modern minimalist Scandinavian kitchen with marble island',
     defaultMoodLighting: 'soft natural daylight with crisp architectural reflections',
     defaultColorMaterial: 'brushed stainless steel with subtle ice-blue LED accents',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?auto=format&fit=crop&w=1000&q=80',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=1000&q=80',
     isPublic: true,
     requireApproval: false,
     fieldPermissions: {

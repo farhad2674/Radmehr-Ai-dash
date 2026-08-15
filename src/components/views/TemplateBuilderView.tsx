@@ -142,7 +142,7 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
       );
       setThumbnailUrl(
         initialTemplate.thumbnailUrl ||
-        'https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?auto=format&fit=crop&w=1000&q=80'
+        'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=1000&q=80'
       );
       setIsPublic(initialTemplate.isPublic ?? true);
       setRequireApproval(initialTemplate.requireApproval ?? false);
