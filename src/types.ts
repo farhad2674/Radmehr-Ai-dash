@@ -37,6 +37,7 @@ export interface ApplianceTemplate {
   defaultMoodLighting?: string;
   defaultColorMaterial?: string;
   referenceImageUrl?: string;
+  resolution?: string;
   thumbnailUrl: string;
   isPublic: boolean;
   requireApproval: boolean;
@@ -104,6 +105,7 @@ export interface GenerateParams {
   prompt: string;
   model: ExecutionModel | string;
   referenceImageUrl?: string;
+  resolution?: string;
   aspectRatio?: string;
   templateId?: string;
 }

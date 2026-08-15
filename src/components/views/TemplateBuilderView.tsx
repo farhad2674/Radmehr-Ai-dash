@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Save, 
+import { useKieImageGenerator } from '../../hooks/useKieImageGenerator';
+import {  Save, 
   Sparkles, 
   UploadCloud, 
   Sliders, 
@@ -35,6 +35,7 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
   onCancel,
   initialTemplate,
 }) => {
+  const kieGenerator = useKieImageGenerator();
   const [name, setName] = useState<string>(initialTemplate?.name || '');
   const [category, setCategory] = useState<string>(initialTemplate?.category || 'Smart Kitchen');
   const [model, setModel] = useState<ExecutionModel>(initialTemplate?.model || 'nano-banana-2');
@@ -228,21 +229,33 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
     }
   };
 
-  const handleGenerateThumbnail = () => {
+  const handleGenerateThumbnail = async () => {
     setIsGeneratingThumbnail(true);
-    setTimeout(() => {
-      const thumbnails = [
-        'https://images.unsplash.com/photo-1545259741-2ea3ebf61fa3?auto=format&fit=crop&w=1000&q=80',
-        'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&w=1000&q=80',
-        'https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?auto=format&fit=crop&w=1000&q=80',
-        'https://images.unsplash.com/photo-1558317374-067fb5f30001?auto=format&fit=crop&w=1000&q=80',
-        'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=1000&q=80',
-        'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1000&q=80',
-      ];
-      const randomTmpl = thumbnails[Math.floor(Math.random() * thumbnails.length)];
-      setThumbnailUrl(randomTmpl);
-      setIsGeneratingThumbnail(false);
-    }, 900);
+    // Use the live preview prompt to resolve variables like {{OBJECT}}, etc.
+    let resolvedPrompt = basePrompt;
+    resolvedPrompt = resolvedPrompt.replace(/{{OBJECT}}/g, applianceObject);
+    resolvedPrompt = resolvedPrompt.replace(/{{TEXT_ZONE}}/g, titleOverlay);
+    resolvedPrompt = resolvedPrompt.replace(/{{ENVIRONMENT}}/g, environmentPlace);
+    resolvedPrompt = resolvedPrompt.replace(/{{PLACE}}/g, environmentPlace);
+    resolvedPrompt = resolvedPrompt.replace(/{{LIGHTING}}/g, moodLighting);
+    resolvedPrompt = resolvedPrompt.replace(/{{MOOD}}/g, moodLighting);
+    resolvedPrompt = resolvedPrompt.replace(/{{COLOR_FINISH}}/g, colorMaterial);
+    resolvedPrompt = resolvedPrompt.replace(/{{input}}/g, titleOverlay);
+    resolvedPrompt = resolvedPrompt.replace(/{{VARIABLE_NAME}}/g, titleOverlay);
+
+    const resultUrl = await kieGenerator.generateImage({
+      prompt: resolvedPrompt,
+      model,
+      aspectRatio: '16:9',
+      resolution: '1K',
+    });
+    
+    if (resultUrl) {
+      setThumbnailUrl(resultUrl);
+    } else {
+      alert('Failed to generate thumbnail. Please check your API configuration.');
+    }
+    setIsGeneratingThumbnail(false);
   };
 
   // Compile live preview of the resolved prompt

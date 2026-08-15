@@ -372,7 +372,7 @@ app.post('/api/storage/backup/import', (req: Request, res: Response) => {
 // -------------------------------------------------------------
 app.post('/api/kie/generate', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { prompt, model, referenceImageUrl, aspectRatio } = req.body;
+    const { prompt, model, referenceImageUrl, aspectRatio, resolution } = req.body;
 
     if (!prompt) {
       res.status(400).json({ error: 'Prompt is required' });
@@ -390,7 +390,7 @@ app.post('/api/kie/generate', async (req: Request, res: Response): Promise<void>
             prompt,
             image_input: referenceImageUrl ? [referenceImageUrl] : [],
             aspect_ratio: aspectRatio === 'auto' ? 'auto' : (aspectRatio || '1:1'),
-            resolution: '1K',
+            resolution: resolution || '1K',
             output_format: 'png'
           }
         };
@@ -551,9 +551,9 @@ app.get('/api/kie/status', async (req: Request, res: Response): Promise<void> =>
   const job = activeJobs.get(taskId);
   if (job && (job.status === 'COMPLETED' || job.status === 'FAILED')) {
     res.json({
-      status: fallbackJob.status,
-      imageUrl: fallbackJob.imageUrl,
-      error: fallbackJob.error || null,
+      status: job.status,
+      imageUrl: job.imageUrl,
+      error: job.error || null,
     });
     return;
   }
