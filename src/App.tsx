@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Navbar } from './components/Navbar';
 import { MobileNavigation } from './components/MobileNavigation';
@@ -22,6 +22,7 @@ import {
   AuditLogEntry, 
   Role 
 } from './types';
+import { storageService, StorageStats } from './services/storageService';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<string>('workspace');
@@ -32,6 +33,7 @@ export default function App() {
   const [users, setUsers] = useState<PersonnelUser[]>(INITIAL_USERS);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>(INITIAL_AUDIT_LOGS);
   const [defaultGenerationLimit, setDefaultGenerationLimit] = useState<number>(50);
+  const [storageStats, setStorageStats] = useState<StorageStats | null>(null);
 
   // Modal & Builder State
   const [activeStudioTemplate, setActiveStudioTemplate] = useState<ApplianceTemplate | null>(null);
@@ -41,6 +43,24 @@ export default function App() {
 
   const currentUserEmail = 'farhad.abdollahi28@gmail.com';
   const currentUserRole = 'Enterprise AI Admin';
+
+  // Fetch initial data from local server disk database (or localStorage fallback)
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const payload = await storageService.initStorage();
+        if (payload.templates) setTemplates(payload.templates);
+        if (payload.assets) setAssets(payload.assets);
+        if (payload.users) setUsers(payload.users);
+        if (payload.auditLogs) setAuditLogs(payload.auditLogs);
+        if (payload.settings?.defaultLimit) setDefaultGenerationLimit(payload.settings.defaultLimit);
+        if (payload.stats) setStorageStats(payload.stats);
+      } catch (err) {
+        console.warn('Initial storage load fallback notice:', err);
+      }
+    }
+    loadData();
+  }, []);
 
   // Find active current user record
   const currentPersonnelUser = users.find((u) => u.email === currentUserEmail) || users[0];
@@ -61,8 +81,8 @@ export default function App() {
     setMobileSidebarOpen(false);
   };
 
-  // Handle saving template from Builder
-  const handleSaveTemplate = (savedTemplate: ApplianceTemplate) => {
+  // Handle saving template from Builder (writes to Server Disk JSON DB)
+  const handleSaveTemplate = async (savedTemplate: ApplianceTemplate) => {
     setTemplates((prev) => {
       const exists = prev.some((t) => t.id === savedTemplate.id);
       if (exists) {
@@ -70,6 +90,9 @@ export default function App() {
       }
       return [savedTemplate, ...prev];
     });
+
+    // Write to server disk
+    storageService.saveTemplate(savedTemplate);
 
     // Log to audit log
     const newLog: AuditLogEntry = {
@@ -83,13 +106,15 @@ export default function App() {
       units: '-',
     };
     setAuditLogs((prev) => [newLog, ...prev]);
+    storageService.addAuditLog(newLog);
 
     setCurrentView('workspace');
   };
 
   // Handle newly generated visual asset from Studio Modal and increment user quota
-  const handleAssetGenerated = (newAsset: GeneratedAsset) => {
+  const handleAssetGenerated = async (newAsset: GeneratedAsset) => {
     setAssets((prev) => [newAsset, ...prev]);
+    storageService.saveAsset(newAsset);
 
     // Increment completedGenerations for current user
     setUsers((prev) =>
@@ -105,6 +130,7 @@ export default function App() {
         return u;
       })
     );
+    storageService.incrementUserUsage(currentUserEmail);
 
     // Add corresponding audit log with telemetry
     const newLog: AuditLogEntry = {
@@ -118,6 +144,7 @@ export default function App() {
       units: 24,
     };
     setAuditLogs((prev) => [newLog, ...prev]);
+    storageService.addAuditLog(newLog);
   };
 
   // Update specific user's generation limit
@@ -130,6 +157,7 @@ export default function App() {
           : u
       )
     );
+    storageService.updateUserLimit(userId, newLimit, allowUnlimited);
 
     if (targetUser) {
       const newLog: AuditLogEntry = {
@@ -143,6 +171,7 @@ export default function App() {
         units: '-',
       };
       setAuditLogs((prev) => [newLog, ...prev]);
+      storageService.addAuditLog(newLog);
     }
   };
 
@@ -152,6 +181,7 @@ export default function App() {
     setUsers((prev) =>
       prev.map((u) => (u.id === userId ? { ...u, completedGenerations: 0 } : u))
     );
+    storageService.resetUserUsage(userId);
 
     if (targetUser) {
       const newLog: AuditLogEntry = {
@@ -165,6 +195,7 @@ export default function App() {
         units: '-',
       };
       setAuditLogs((prev) => [newLog, ...prev]);
+      storageService.addAuditLog(newLog);
     }
   };
 
@@ -191,11 +222,13 @@ export default function App() {
       units: '-',
     };
     setAuditLogs((prev) => [newLog, ...prev]);
+    storageService.addAuditLog(newLog);
   };
 
   // Batch reset completed count for all users
   const handleBatchResetUsage = () => {
     setUsers((prev) => prev.map((u) => ({ ...u, completedGenerations: 0 })));
+    storageService.resetAllUsage();
 
     const newLog: AuditLogEntry = {
       id: `log-${Date.now()}`,
@@ -208,6 +241,33 @@ export default function App() {
       units: '-',
     };
     setAuditLogs((prev) => [newLog, ...prev]);
+    storageService.addAuditLog(newLog);
+  };
+
+  // Export full JSON backup
+  const handleExportBackup = async () => {
+    const backup = await storageService.exportBackup();
+    if (backup) {
+      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(backup, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute('href', dataStr);
+      downloadAnchor.setAttribute('download', `parspack_radmehrai_backup_${Date.now()}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+  };
+
+  // Import full JSON backup
+  const handleImportBackup = async (backupData: any) => {
+    const success = await storageService.importBackup(backupData);
+    if (success) {
+      const payload = await storageService.initStorage();
+      if (payload.templates) setTemplates(payload.templates);
+      if (payload.assets) setAssets(payload.assets);
+      if (payload.users) setUsers(payload.users);
+      if (payload.auditLogs) setAuditLogs(payload.auditLogs);
+    }
   };
 
   // Toggle bookmark on asset
@@ -248,6 +308,7 @@ export default function App() {
       units: '-',
     };
     setAuditLogs((prev) => [newLog, ...prev]);
+    storageService.addAuditLog(newLog);
   };
 
   // Update user role
@@ -265,103 +326,91 @@ export default function App() {
         user: 'Farhad Abdollahi',
         action: 'Role Modified',
         type: 'Role Changed',
-        details: `Updated role for ${targetUser.name}: ${targetUser.role} -> ${newRole}`,
+        details: `Modified role for ${targetUser.name} to ${newRole}.`,
         units: '-',
       };
       setAuditLogs((prev) => [newLog, ...prev]);
+      storageService.addAuditLog(newLog);
     }
   };
 
   // Delete user
   const handleDeleteUser = (userId: string) => {
+    const targetUser = users.find((u) => u.id === userId);
     setUsers((prev) => prev.filter((u) => u.id !== userId));
+
+    if (targetUser) {
+      const newLog: AuditLogEntry = {
+        id: `log-${Date.now()}`,
+        time: 'Just now',
+        timestamp: new Date().toISOString(),
+        user: 'Farhad Abdollahi',
+        action: 'User Deleted',
+        type: 'Role Changed',
+        details: `Removed user ${targetUser.name} (${targetUser.email}) from workspace.`,
+        units: '-',
+      };
+      setAuditLogs((prev) => [newLog, ...prev]);
+      storageService.addAuditLog(newLog);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-[#F1F4F9] text-[#191c23] flex font-sans antialiased selection:bg-[#1A73E8]/20 selection:text-[#1A73E8]">
-      
-      {/* Desktop Left Sidebar */}
-      <div className="hidden md:block">
-        <Sidebar
-          currentView={currentView}
-          onNavigate={(view) => setCurrentView(view)}
-          onOpenNewTemplate={handleOpenNewTemplate}
-          userEmail={currentUserEmail}
-          userRole={currentUserRole}
-          completedGenerations={currentUserCompleted}
-          generationLimit={currentUserLimit}
-          allowUnlimited={currentUserUnlimited}
-        />
-      </div>
+    <div className="flex min-h-screen bg-[#FDFCF6] text-[#191c23] antialiased selection:bg-[#1A73E8] selection:text-white font-sans">
+      {/* Desktop Navigation Sidebar */}
+      <Sidebar
+        currentView={currentView}
+        onNavigate={(view) => {
+          setCurrentView(view);
+          if (view !== 'builder') setBuilderTemplate(null);
+        }}
+        onNewTemplate={handleOpenNewTemplate}
+        workspaceName="RadmehrAI Studio"
+      />
 
-      {/* Mobile Drawer Backdrop & Sidebar */}
-      {mobileSidebarOpen && (
-        <div className="md:hidden fixed inset-0 z-40 flex">
-          <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-xs"
-            onClick={() => setMobileSidebarOpen(false)}
-          />
-          <div className="relative z-50 w-72 h-full bg-white shadow-2xl">
-            <Sidebar
-              currentView={currentView}
-              onNavigate={(view) => {
-                setCurrentView(view);
-                setMobileSidebarOpen(false);
-              }}
-              onOpenNewTemplate={handleOpenNewTemplate}
-              userEmail={currentUserEmail}
-              userRole={currentUserRole}
-              completedGenerations={currentUserCompleted}
-              generationLimit={currentUserLimit}
-              allowUnlimited={currentUserUnlimited}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Main Content Area */}
+      {/* Main App Workspace Canvas Area */}
       <div className="flex-1 flex flex-col min-w-0">
         
         {/* Top Navbar */}
         <Navbar
           currentView={currentView}
+          onNavigate={(view) => setCurrentView(view)}
+          user={{
+            name: 'Farhad Abdollahi',
+            email: currentUserEmail,
+            role: currentUserRole,
+            avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+          }}
+          userLimit={currentUserLimit}
+          userCompleted={currentUserCompleted}
+          userUnlimited={currentUserUnlimited}
           onOpenMobileMenu={() => setMobileSidebarOpen(true)}
-          onOpenNewTemplate={handleOpenNewTemplate}
-          onNavigateToGovernance={() => setCurrentView('governance')}
-          userEmail={currentUserEmail}
-          userRole={currentUserRole}
-          completedGenerations={currentUserCompleted}
-          generationLimit={currentUserLimit}
-          allowUnlimited={currentUserUnlimited}
+          onNewTemplate={handleOpenNewTemplate}
+          onOpenGovernance={() => setCurrentView('governance')}
         />
 
-        {/* View Switcher Container */}
-        <main className="flex-1 overflow-y-auto">
+        {/* Dynamic View Router */}
+        <main className="flex-1">
           {currentView === 'workspace' && (
             <WorkspaceView
               templates={templates}
               onSelectTemplate={handleSelectTemplate}
               onCreateNewTemplate={handleOpenNewTemplate}
-              onNavigateToGovernance={() => setCurrentView('governance')}
-              userEmail={currentUserEmail}
-              completedGenerations={currentUserCompleted}
-              generationLimit={currentUserLimit}
-              allowUnlimited={currentUserUnlimited}
             />
           )}
 
           {currentView === 'builder' && (
             <TemplateBuilderView
+              initialTemplate={builderTemplate}
               onSaveTemplate={handleSaveTemplate}
               onCancel={() => setCurrentView('workspace')}
-              initialTemplate={builderTemplate}
             />
           )}
 
           {currentView === 'explore' && (
             <ExploreFeedView
               assets={assets}
-              onSelectTemplateById={handleSelectTemplateById}
+              onSelectTemplate={handleSelectTemplateById}
               onBookmarkToggle={handleBookmarkToggle}
             />
           )}
@@ -371,6 +420,7 @@ export default function App() {
               users={users}
               auditLogs={auditLogs}
               defaultGenerationLimit={defaultGenerationLimit}
+              storageStats={storageStats}
               onInviteUser={handleInviteUser}
               onUpdateUserRole={handleUpdateUserRole}
               onUpdateUserLimit={handleUpdateUserLimit}
@@ -378,29 +428,34 @@ export default function App() {
               onUpdateDefaultLimit={handleUpdateDefaultLimit}
               onBatchResetUsage={handleBatchResetUsage}
               onDeleteUser={handleDeleteUser}
+              onExportBackup={handleExportBackup}
+              onImportBackup={handleImportBackup}
             />
           )}
 
           {currentView === 'profile' && (
             <ProfileView
-              userEmail={currentUserEmail}
-              totalAssetsCount={assets.length}
-              completedGenerations={currentUserCompleted}
-              generationLimit={currentUserLimit}
-              allowUnlimited={currentUserUnlimited}
-              onNavigateToGovernance={() => setCurrentView('governance')}
+              user={{
+                name: 'Farhad Abdollahi',
+                email: currentUserEmail,
+                role: currentUserRole,
+                department: 'Enterprise AI Architecture',
+                initials: 'FA',
+                avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+                status: 'Active',
+                generationLimit: currentUserLimit,
+                completedGenerations: currentUserCompleted,
+                allowUnlimited: currentUserUnlimited,
+              }}
+              auditLogs={auditLogs.filter((l) => l.user.includes('Farhad'))}
+              userAssets={assets.filter((a) => a.creator.email === currentUserEmail)}
+              onOpenGovernance={() => setCurrentView('governance')}
             />
           )}
         </main>
-
-        {/* Mobile Bottom Navigation */}
-        <MobileNavigation
-          currentView={currentView}
-          onNavigate={(view) => setCurrentView(view)}
-        />
       </div>
 
-      {/* Studio Image Generation Modal */}
+      {/* Generation Studio Modal Dialog */}
       <StudioModal
         template={activeStudioTemplate}
         isOpen={isStudioModalOpen}
@@ -415,6 +470,15 @@ export default function App() {
         }}
       />
 
+      {/* Mobile Navigation Drawer / Tab Bar */}
+      <MobileNavigation
+        currentView={currentView}
+        onNavigate={(view) => {
+          setCurrentView(view);
+          if (view !== 'builder') setBuilderTemplate(null);
+        }}
+        onNewTemplate={handleOpenNewTemplate}
+      />
     </div>
   );
 }

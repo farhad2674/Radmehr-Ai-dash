@@ -1,15 +1,50 @@
 import express, { Request, Response } from 'express';
 import path from 'path';
+import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
+import {
+  initDiskStorage,
+  getTemplatesFromDisk,
+  saveTemplateToDisk,
+  deleteTemplateFromDisk,
+  getAssetsFromDisk,
+  saveAssetToDisk,
+  deleteAssetFromDisk,
+  getUsersFromDisk,
+  saveUserToDisk,
+  updateUserLimitOnDisk,
+  incrementUserUsageOnDisk,
+  resetUserUsageOnDisk,
+  batchResetAllUsageOnDisk,
+  getLogsFromDisk,
+  appendLogToDisk,
+  getSettingsFromDisk,
+  saveSettingsToDisk,
+  saveImageBase64ToDisk,
+  getStorageStats,
+  exportFullBackup,
+  importFullBackup,
+} from './server/diskStore';
 
 dotenv.config();
 
 const PORT = 3000;
 const app = express();
 
-app.use(express.json({ limit: '10mb' }));
+// Initialize local disk JSON DB & Uploads directories for Parspack / Node.js
+initDiskStorage();
+
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Serve local static uploaded image assets directly from server disk
+const uploadsDir = path.join(process.cwd(), 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+app.use('/uploads', express.static(uploadsDir));
 
 // Initialize Google GenAI client
 let aiClient: GoogleGenAI | null = null;
@@ -60,13 +95,19 @@ const FALLBACK_APPLIANCE_IMAGES = [
 ];
 
 // Asynchronous generation worker
-async function processGenerationTask(taskId: string, prompt: string, model: string, aspectRatio: string, referenceImageUrl?: string) {
+async function processGenerationTask(
+  taskId: string,
+  prompt: string,
+  model: string,
+  aspectRatio: string,
+  referenceImageUrl?: string
+) {
   const job = activeJobs.get(taskId);
   if (!job) return;
 
   job.status = 'PROCESSING';
 
-  // Attempt real AI generation with Gemini Flash Lite / Image or Kie.ai
+  // Attempt real AI generation with Gemini Flash Image
   const ai = getAI();
   if (ai && process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'MY_GEMINI_API_KEY') {
     try {
@@ -82,7 +123,14 @@ async function processGenerationTask(taskId: string, prompt: string, model: stri
         },
         config: {
           imageConfig: {
-            aspectRatio: (aspectRatio === '1:1' || aspectRatio === '16:9' || aspectRatio === '4:3' || aspectRatio === '3:4' || aspectRatio === '9:16') ? aspectRatio : '16:9',
+            aspectRatio:
+              aspectRatio === '1:1' ||
+              aspectRatio === '16:9' ||
+              aspectRatio === '4:3' ||
+              aspectRatio === '3:4' ||
+              aspectRatio === '9:16'
+                ? (aspectRatio as any)
+                : '16:9',
           },
         },
       });
@@ -92,7 +140,9 @@ async function processGenerationTask(taskId: string, prompt: string, model: stri
         for (const part of response.candidates[0].content.parts) {
           if (part.inlineData?.data) {
             const mimeType = part.inlineData.mimeType || 'image/png';
-            job.imageUrl = `data:${mimeType};base64,${part.inlineData.data}`;
+            // Save image directly to server disk for offline, self-hosted permanent storage!
+            const diskUrl = saveImageBase64ToDisk(part.inlineData.data, mimeType);
+            job.imageUrl = diskUrl;
             job.status = 'COMPLETED';
             job.completedAt = Date.now();
             foundImage = true;
@@ -102,21 +152,19 @@ async function processGenerationTask(taskId: string, prompt: string, model: stri
       }
 
       if (foundImage) {
-        console.log(`[Job ${taskId}] Successfully generated image via Gemini`);
+        console.log(`[Job ${taskId}] Successfully generated & saved image to disk: ${job.imageUrl}`);
         return;
       }
     } catch (genError: any) {
       console.warn(`[Job ${taskId}] Gemini image generation notice:`, genError?.message || genError);
-      // Fall through to realistic simulated studio rendering pipeline
     }
   }
 
-  // Graceful high-fidelity studio pipeline (simulates the 5-8 second rendering lifecycle for demo & non-paid keys)
+  // Graceful high-fidelity studio pipeline (simulates rendering lifecycle for demo & non-paid keys)
   setTimeout(() => {
     const current = activeJobs.get(taskId);
     if (!current) return;
 
-    // Pick contextual matching high-res appliance preview
     let selectedImage = FALLBACK_APPLIANCE_IMAGES[0];
     const pLower = prompt.toLowerCase();
     if (pLower.includes('refrigerator') || pLower.includes('fridge')) {
@@ -134,19 +182,185 @@ async function processGenerationTask(taskId: string, prompt: string, model: stri
     } else if (pLower.includes('dish') || pLower.includes('ultrasonic')) {
       selectedImage = FALLBACK_APPLIANCE_IMAGES[7];
     } else {
-      const idx = Math.abs(taskId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % FALLBACK_APPLIANCE_IMAGES.length;
+      const idx =
+        Math.abs(taskId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) %
+        FALLBACK_APPLIANCE_IMAGES.length;
       selectedImage = FALLBACK_APPLIANCE_IMAGES[idx];
     }
 
     current.imageUrl = selectedImage;
     current.status = 'COMPLETED';
     current.completedAt = Date.now();
-    console.log(`[Job ${taskId}] Completed successfully with studio asset.`);
+    console.log(`[Job ${taskId}] Completed with asset: ${selectedImage}`);
   }, 4500);
 }
 
 // -------------------------------------------------------------
-// API ROUTE A: Job Submission Route (Kie.ai Spec)
+// REST API: INITIALIZE ALL DATA FROM DISK
+// -------------------------------------------------------------
+app.get('/api/storage/init', (req: Request, res: Response) => {
+  res.json({
+    templates: getTemplatesFromDisk(),
+    assets: getAssetsFromDisk(),
+    users: getUsersFromDisk(),
+    auditLogs: getLogsFromDisk(),
+    settings: getSettingsFromDisk(),
+    stats: getStorageStats(),
+  });
+});
+
+// -------------------------------------------------------------
+// REST API: TEMPLATES CRUD
+// -------------------------------------------------------------
+app.get('/api/templates', (req: Request, res: Response) => {
+  res.json(getTemplatesFromDisk());
+});
+
+app.post('/api/templates', (req: Request, res: Response) => {
+  const template = req.body;
+  if (!template || !template.name) {
+    res.status(400).json({ error: 'Valid template object is required' });
+    return;
+  }
+  const updated = saveTemplateToDisk(template);
+  res.json({ success: true, templates: updated });
+});
+
+app.delete('/api/templates/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const updated = deleteTemplateFromDisk(id);
+  res.json({ success: true, templates: updated });
+});
+
+// -------------------------------------------------------------
+// REST API: ASSETS CRUD
+// -------------------------------------------------------------
+app.get('/api/assets', (req: Request, res: Response) => {
+  res.json(getAssetsFromDisk());
+});
+
+app.post('/api/assets', (req: Request, res: Response) => {
+  const asset = req.body;
+  if (!asset || !asset.imageUrl) {
+    res.status(400).json({ error: 'Valid asset object is required' });
+    return;
+  }
+  const updated = saveAssetToDisk(asset);
+  res.json({ success: true, assets: updated });
+});
+
+app.delete('/api/assets/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const updated = deleteAssetFromDisk(id);
+  res.json({ success: true, assets: updated });
+});
+
+// -------------------------------------------------------------
+// REST API: PERSONNEL USERS & QUOTA MANAGEMENT
+// -------------------------------------------------------------
+app.get('/api/users', (req: Request, res: Response) => {
+  res.json(getUsersFromDisk());
+});
+
+app.post('/api/users', (req: Request, res: Response) => {
+  const user = req.body;
+  if (!user || !user.email) {
+    res.status(400).json({ error: 'Valid user object is required' });
+    return;
+  }
+  const updated = saveUserToDisk(user);
+  res.json({ success: true, users: updated });
+});
+
+app.put('/api/users/:id/limit', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { limit, allowUnlimited } = req.body;
+  const updated = updateUserLimitOnDisk(id, Number(limit) || 50, !!allowUnlimited);
+  res.json({ success: true, users: updated });
+});
+
+app.post('/api/users/:id/increment', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const updated = incrementUserUsageOnDisk(id);
+  res.json({ success: true, users: updated });
+});
+
+app.post('/api/users/:id/reset', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const updated = resetUserUsageOnDisk(id);
+  res.json({ success: true, users: updated });
+});
+
+app.post('/api/users/reset-all', (req: Request, res: Response) => {
+  const updated = batchResetAllUsageOnDisk();
+  res.json({ success: true, users: updated });
+});
+
+// -------------------------------------------------------------
+// REST API: AUDIT LOGS
+// -------------------------------------------------------------
+app.get('/api/audit-logs', (req: Request, res: Response) => {
+  res.json(getLogsFromDisk());
+});
+
+app.post('/api/audit-logs', (req: Request, res: Response) => {
+  const log = req.body;
+  if (!log) {
+    res.status(400).json({ error: 'Log entry is required' });
+    return;
+  }
+  const updated = appendLogToDisk(log);
+  res.json({ success: true, auditLogs: updated });
+});
+
+// -------------------------------------------------------------
+// REST API: IMAGE UPLOAD DIRECTLY TO DISK (Base64 / Binary)
+// -------------------------------------------------------------
+app.post('/api/upload-image', (req: Request, res: Response) => {
+  try {
+    const { base64Data, mimeType } = req.body;
+    if (!base64Data) {
+      res.status(400).json({ error: 'base64Data is required' });
+      return;
+    }
+    const localUrl = saveImageBase64ToDisk(base64Data, mimeType || 'image/png');
+    res.json({ success: true, imageUrl: localUrl });
+  } catch (err: any) {
+    console.error('Image upload to disk failed:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// -------------------------------------------------------------
+// REST API: STORAGE STATS & BACKUP
+// -------------------------------------------------------------
+app.get('/api/storage/stats', (req: Request, res: Response) => {
+  res.json(getStorageStats());
+});
+
+app.get('/api/storage/backup/export', (req: Request, res: Response) => {
+  const backup = exportFullBackup();
+  res.json(backup);
+});
+
+app.post('/api/storage/backup/import', (req: Request, res: Response) => {
+  const backupData = req.body;
+  const success = importFullBackup(backupData);
+  if (success) {
+    res.json({
+      success: true,
+      templates: getTemplatesFromDisk(),
+      assets: getAssetsFromDisk(),
+      users: getUsersFromDisk(),
+      auditLogs: getLogsFromDisk(),
+    });
+  } else {
+    res.status(500).json({ error: 'Failed to import backup data' });
+  }
+});
+
+// -------------------------------------------------------------
+// API ROUTE A: Job Submission Route (Kie.ai & Self-Hosted Engine)
 // -------------------------------------------------------------
 app.post('/api/kie/generate', async (req: Request, res: Response): Promise<void> => {
   try {
@@ -165,7 +379,7 @@ app.post('/api/kie/generate', async (req: Request, res: Response): Promise<void>
         const kieRes = await fetch('https://api.kie.ai/api/v1/jobs/create', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${kieApiKey}`,
+            Authorization: `Bearer ${kieApiKey}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
@@ -183,7 +397,7 @@ app.post('/api/kie/generate', async (req: Request, res: Response): Promise<void>
           return;
         }
       } catch (kieErr) {
-        console.warn('Direct Kie.ai API error, falling back to studio internal job runner:', kieErr);
+        console.warn('Direct Kie.ai API error, falling back to local studio runner:', kieErr);
       }
     }
 
@@ -212,7 +426,7 @@ app.post('/api/kie/generate', async (req: Request, res: Response): Promise<void>
 });
 
 // -------------------------------------------------------------
-// API ROUTE B: Status Check Route (Kie.ai Spec)
+// API ROUTE B: Status Check Route
 // -------------------------------------------------------------
 app.get('/api/kie/status', async (req: Request, res: Response): Promise<void> => {
   const taskId = req.query.taskId as string;
@@ -224,13 +438,12 @@ app.get('/api/kie/status', async (req: Request, res: Response): Promise<void> =>
 
   const kieApiKey = process.env.KIE_AI_API_KEY;
 
-  // Check Kie.ai remote endpoint if configured
   if (kieApiKey && kieApiKey.trim() !== '' && !taskId.startsWith('job_kie_')) {
     try {
       const response = await fetch(`https://api.kie.ai/api/v1/jobs/recordInfo?taskId=${taskId}`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${kieApiKey}`,
+          Authorization: `Bearer ${kieApiKey}`,
           'Content-Type': 'application/json',
         },
       });
@@ -250,7 +463,6 @@ app.get('/api/kie/status', async (req: Request, res: Response): Promise<void> =>
     }
   }
 
-  // Check local job registry
   const job = activeJobs.get(taskId);
   if (job) {
     res.json({
@@ -261,7 +473,6 @@ app.get('/api/kie/status', async (req: Request, res: Response): Promise<void> =>
     return;
   }
 
-  // If not found in active map, return COMPLETED with smart default fallback
   res.json({
     status: 'COMPLETED',
     imageUrl: FALLBACK_APPLIANCE_IMAGES[0],
@@ -282,7 +493,6 @@ app.post('/api/gemini/optimize-prompt', async (req: Request, res: Response): Pro
 
     const ai = getAI();
     if (!ai) {
-      // Offline fallback optimization
       const enhanced = `${basePrompt.trim()}, high-end industrial design product render, studio rim lighting, 8k resolution, crisp photorealistic UI screen display, natural reflections, architectural digest quality.`;
       res.json({ optimizedPrompt: enhanced });
       return;
@@ -291,7 +501,7 @@ app.post('/api/gemini/optimize-prompt', async (req: Request, res: Response): Pro
     const response = await ai.models.generateContent({
       model: 'gemini-3.7-flash',
       contents: `You are an expert Enterprise AI Studio Prompt Engineer specializing in high-end consumer appliance product photography and UI mockups.
-Optimize the following base prompt for image generation with ${model || 'nano-banana-2'}. Ensure you retain any variable placeholders like {{TEXT_ZONE}} or {{VARIABLE}} intact. Add realistic lighting, textural details, materials (brushed steel, dark glass, illuminated LED indicators), and crisp UI contrast. Return ONLY the enhanced prompt string without commentary or markdown codeblocks.
+Optimize the following base prompt for image generation with ${model || 'nano-banana-2'}. Ensure you retain any variable placeholders like {{TEXT_ZONE}} or {{OBJECT}} intact. Add realistic lighting, textural details, materials, and crisp UI contrast. Return ONLY the enhanced prompt string without commentary or markdown codeblocks.
 
 Category: ${category || 'Smart Appliance'}
 Base Prompt: "${basePrompt}"`,
@@ -310,7 +520,8 @@ app.get('/api/health', (req: Request, res: Response) => {
   res.json({
     status: 'ok',
     studio: 'RadmehrAI Studio',
-    version: '2.4.1',
+    version: '2.5.0-parspack-selfhosted',
+    storageMode: 'Node.js Local Disk & Static Uploads',
     hasGeminiKey: Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'MY_GEMINI_API_KEY'),
     hasKieKey: Boolean(process.env.KIE_AI_API_KEY),
   });
@@ -333,6 +544,7 @@ async function startServer() {
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`RadmehrAI Studio server running on http://0.0.0.0:${PORT}`);
+    console.log(`Disk Storage: Local JSON DB and /uploads directory active.`);
   });
 }
 
