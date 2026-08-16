@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 
 interface SidebarProps {
+  userName?: string;
+  onLogout?: () => void;
   currentView: string;
   onNavigate: (view: string) => void;
   onOpenNewTemplate: () => void;
@@ -25,6 +27,8 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
+  userName = 'Farhad Abdollahi',
+  onLogout,
   currentView,
   onNavigate,
   onOpenNewTemplate,
@@ -139,7 +143,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         <button
           id="nav-link-signout"
-          onClick={() => alert('Signed out of Enterprise AI Admin session.')}
+          onClick={() => onLogout ? onLogout() : alert('Signed out of Enterprise AI Admin session.')}
           className="w-full flex items-center gap-3.5 px-3.5 py-2 rounded-xl text-xs font-medium text-[#ba1a1a] hover:bg-red-50 transition-colors cursor-pointer text-left"
         >
           <LogOut className="w-4 h-4 text-[#ba1a1a]" />
@@ -149,10 +153,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* User Mini Card */}
         <div className="mt-2 pt-2 border-t border-[#f0f2f8] px-1 flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white text-xs font-bold flex items-center justify-center shrink-0">
-            FA
+            {userName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold text-[#191c23] truncate">Farhad Abdollahi</p>
+            <p className="text-xs font-semibold text-[#191c23] truncate">{userName}</p>
             <p className="text-[11px] text-[#727785] truncate">{userEmail}</p>
           </div>
         </div>

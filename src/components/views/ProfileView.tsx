@@ -18,25 +18,32 @@ import {
 } from 'lucide-react';
 
 interface ProfileViewProps {
-  userEmail?: string;
-  totalAssetsCount: number;
-  completedGenerations?: number;
-  generationLimit?: number;
-  allowUnlimited?: boolean;
-  onNavigateToGovernance?: () => void;
+  user: {
+    name: string;
+    email: string;
+    role: string;
+    department: string;
+    initials: string;
+    avatar: string;
+    status: string;
+    generationLimit: number;
+    completedGenerations: number;
+    allowUnlimited: boolean;
+  };
+  auditLogs: any[];
+  userAssets: any[];
+  onOpenGovernance: () => void;
 }
 
 export const ProfileView: React.FC<ProfileViewProps> = ({
-  userEmail = 'farhad.abdollahi28@gmail.com',
-  totalAssetsCount,
-  completedGenerations = 24,
-  generationLimit = 50,
-  allowUnlimited = false,
-  onNavigateToGovernance,
+  user,
+  auditLogs,
+  userAssets,
+  onOpenGovernance,
 }) => {
   const [copiedKey, setCopiedKey] = useState(false);
-  const percentageUsed = allowUnlimited ? 0 : Math.min(100, Math.round((completedGenerations / generationLimit) * 100));
-  const remaining = allowUnlimited ? 999999 : Math.max(0, generationLimit - completedGenerations);
+  const percentageUsed = user.allowUnlimited ? 0 : Math.min(100, Math.round((user.completedGenerations / user.generationLimit) * 100));
+  const remaining = user.allowUnlimited ? 999999 : Math.max(0, user.generationLimit - user.completedGenerations);
 
   return (
     <div className="p-6 md:p-8 max-w-5xl mx-auto space-y-6 animate-fade-in pb-28 md:pb-10">
@@ -57,7 +64,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               </span>
             </div>
             <p className="text-xs text-[#5F6368] font-mono mt-1">
-              {userEmail}
+              {user.email}
             </p>
             <p className="text-xs text-[#727785] mt-0.5">
               Department: Enterprise AI Governance & Appliance Vision Systems
@@ -75,7 +82,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           <div className="px-4 py-2 bg-[#F8F9FD] border border-[#E0E2EC] rounded-xl text-xs text-center flex-1 md:flex-initial">
             <span className="text-[#5F6368] block">Generation Limit</span>
             <span className="font-semibold text-[#1A73E8] mt-0.5 block font-mono">
-              {allowUnlimited ? 'Unlimited' : `${generationLimit} max`}
+              {user.allowUnlimited ? 'Unlimited' : `${user.generationLimit} max`}
             </span>
           </div>
         </div>
@@ -92,7 +99,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               AI Image Generation Limit
             </h3>
             <span className="text-xs font-mono font-bold text-[#1A73E8]">
-              {allowUnlimited ? 'Unlimited' : `${completedGenerations} / ${generationLimit} Images`}
+              {user.allowUnlimited ? 'Unlimited' : `${user.completedGenerations} / ${user.generationLimit} Images`}
             </span>
           </div>
 
@@ -111,7 +118,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </div>
             <div className="flex justify-between text-[11px] text-[#5F6368]">
               <span>
-                {allowUnlimited ? 'No Limit Active' : `${remaining} images remaining`}
+                {user.allowUnlimited ? 'No Limit Active' : `${remaining} images remaining`}
               </span>
               <span>{percentageUsed}% of quota used</span>
             </div>
@@ -121,19 +128,19 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <div className="p-2.5 bg-[#F8F9FD] rounded-lg border border-[#E0E2EC]">
               <span className="text-[#5F6368] text-[11px] block">Quota Cap</span>
               <span className="font-semibold text-[#191c23] font-mono">
-                {allowUnlimited ? 'Unlimited' : `${generationLimit} Max Images`}
+                {user.allowUnlimited ? 'Unlimited' : `${user.generationLimit} Max Images`}
               </span>
             </div>
             <div className="p-2.5 bg-[#F8F9FD] rounded-lg border border-[#E0E2EC]">
               <span className="text-[#5F6368] text-[11px] block">Completed Generations</span>
-              <span className="font-semibold text-[#191c23] font-mono">{completedGenerations} Completed</span>
+              <span className="font-semibold text-[#191c23] font-mono">{user.completedGenerations} Completed</span>
             </div>
           </div>
 
-          {onNavigateToGovernance && (
+          {onOpenGovernance && (
             <div className="pt-1">
               <button
-                onClick={onNavigateToGovernance}
+                onClick={onOpenGovernance}
                 className="w-full py-2 bg-[#F1F4F9] hover:bg-[#E8F0FE] text-[#1A73E8] border border-[#DADCE0] hover:border-[#1A73E8] rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               >
                 <Sliders className="w-3.5 h-3.5" />

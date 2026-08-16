@@ -122,6 +122,25 @@ export const storageService = {
     return [];
   },
 
+  // Save or register user to server disk
+  async saveUser(user: PersonnelUser): Promise<PersonnelUser[]> {
+    try {
+      const res = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(user),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        localStorage.setItem(CACHE_KEYS.USERS, JSON.stringify(data.users));
+        return data.users;
+      }
+    } catch (e) {
+      console.warn('Failed saving user to server disk:', e);
+    }
+    return [];
+  },
+
   // Update user quota limits
   async updateUserLimit(userId: string, limit: number, allowUnlimited?: boolean): Promise<PersonnelUser[]> {
     try {

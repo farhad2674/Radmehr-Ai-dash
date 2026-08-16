@@ -6,6 +6,7 @@ import { StudioModal } from './components/StudioModal';
 import { WorkspaceView } from './components/views/WorkspaceView';
 import { TemplateBuilderView } from './components/views/TemplateBuilderView';
 import { ExploreFeedView } from './components/views/ExploreFeedView';
+import { AuthView } from './components/views/AuthView';
 import { GovernanceView } from './components/views/GovernanceView';
 import { ProfileView } from './components/views/ProfileView';
 
@@ -41,8 +42,123 @@ export default function App() {
   const [builderTemplate, setBuilderTemplate] = useState<ApplianceTemplate | null>(null);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState<boolean>(false);
 
-  const currentUserEmail = 'farhad.abdollahi28@gmail.com';
-  const currentUserRole = 'Enterprise AI Admin';
+  // Authentication State with browser cache verification
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    const localAuth = localStorage.getItem('isAuthenticated');
+    const sessionAuth = sessionStorage.getItem('isAuthenticated');
+    return localAuth === 'true' || sessionAuth === 'true';
+  });
+
+  const [currentUserEmail, setCurrentUserEmail] = useState<string>(() => {
+    return localStorage.getItem('currentUserEmail') || sessionStorage.getItem('currentUserEmail') || '';
+  });
+
+  const [currentUserName, setCurrentUserName] = useState<string>(() => {
+    return localStorage.getItem('currentUserName') || sessionStorage.getItem('currentUserName') || '';
+  });
+
+  const [currentUserRole, setCurrentUserRole] = useState<string>(() => {
+    return localStorage.getItem('currentUserRole') || sessionStorage.getItem('currentUserRole') || 'Viewer';
+  });
+
+  const [currentUserDepartment, setCurrentUserDepartment] = useState<string>(() => {
+    return localStorage.getItem('currentUserDepartment') || sessionStorage.getItem('currentUserDepartment') || 'Design & Engineering';
+  });
+
+  const handleAuth = (data: { email: string; name?: string; role?: string; department?: string; rememberMe?: boolean }) => {
+    const email = data.email.trim();
+    // Resolve user details
+    const existingUser = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+    const assignedRole = (data.role || existingUser?.role || (email.toLowerCase().includes('farhad') ? 'Admin' : 'Editor')) as Role;
+    const assignedName = data.name?.trim() || existingUser?.name || email.split('@')[0];
+    const assignedDept = data.department?.trim() || existingUser?.department || 'Enterprise AI Architecture';
+
+    setCurrentUserEmail(email);
+    setCurrentUserName(assignedName);
+    setCurrentUserRole(assignedRole);
+    setCurrentUserDepartment(assignedDept);
+
+    const storage = data.rememberMe !== false ? localStorage : sessionStorage;
+    storage.setItem('isAuthenticated', 'true');
+    storage.setItem('currentUserEmail', email);
+    storage.setItem('currentUserName', assignedName);
+    storage.setItem('currentUserRole', assignedRole);
+    storage.setItem('currentUserDepartment', assignedDept);
+
+    if (data.rememberMe !== false) {
+      sessionStorage.removeItem('isAuthenticated');
+      sessionStorage.removeItem('currentUserEmail');
+      sessionStorage.removeItem('currentUserName');
+      sessionStorage.removeItem('currentUserRole');
+      sessionStorage.removeItem('currentUserDepartment');
+    }
+
+    // Ensure user exists in personnel users list
+    setUsers((prev) => {
+      const match = prev.find((u) => u.email.toLowerCase() === email.toLowerCase());
+      if (match) {
+        return prev.map((u) =>
+          u.email.toLowerCase() === email.toLowerCase()
+            ? { ...u, name: assignedName, role: assignedRole, lastActive: 'Just now' }
+            : u
+        );
+      } else {
+        const newUser: PersonnelUser = {
+          id: `user-${Date.now()}`,
+          name: assignedName,
+          email: email,
+          role: assignedRole,
+          department: assignedDept,
+          status: 'Active',
+          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+          generationLimit: defaultGenerationLimit,
+          completedGenerations: 0,
+          allowUnlimited: assignedRole === 'Admin',
+          lastActive: 'Just now',
+        };
+        storageService.saveUser(newUser);
+        return [newUser, ...prev];
+      }
+    });
+
+    // Record enterprise audit log entry
+    const authLog: AuditLogEntry = {
+      id: `log-${Date.now()}`,
+      time: 'Just now',
+      timestamp: new Date().toISOString(),
+      user: `${assignedName} (${assignedRole})`,
+      action: 'User Authenticated',
+      type: 'Role Changed',
+      details: `Session verified for ${email} (${assignedRole} in ${assignedDept}). Insured SOC-2 session active.`,
+      units: '-',
+    };
+    setAuditLogs((prev) => [authLog, ...prev]);
+    storageService.addAuditLog(authLog);
+
+    setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    
+    localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('currentUserEmail');
+    localStorage.removeItem('currentUserName');
+    localStorage.removeItem('currentUserRole');
+    localStorage.removeItem('currentUserDepartment');
+
+    sessionStorage.removeItem('isAuthenticated');
+    sessionStorage.removeItem('currentUserEmail');
+    sessionStorage.removeItem('currentUserName');
+    sessionStorage.removeItem('currentUserRole');
+    sessionStorage.removeItem('currentUserDepartment');
+
+    setCurrentUserEmail('');
+    setCurrentUserName('');
+    setCurrentUserRole('Viewer');
+    setCurrentUserDepartment('Design & Engineering');
+    setCurrentView('workspace');
+  };
 
   // Fetch initial data from local server disk database (or localStorage fallback)
   useEffect(() => {
@@ -63,12 +179,35 @@ export default function App() {
   }, []);
 
   // Find active current user record
-  const currentPersonnelUser = users.find((u) => u.email === currentUserEmail) || users[0];
+  const currentPersonnelUser = users.find(
+    (u) => u.email.toLowerCase() === currentUserEmail.toLowerCase()
+  ) || {
+    id: 'current-user-session',
+    name: currentUserName || 'Workspace Member',
+    email: currentUserEmail || 'user@company.com',
+    role: (currentUserRole as Role) || 'Viewer',
+    department: currentUserDepartment || 'Design & Engineering',
+    status: 'Active' as const,
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+    generationLimit: defaultGenerationLimit,
+    completedGenerations: 0,
+    allowUnlimited: currentUserRole === 'Admin',
+    lastActive: 'Just now',
+  };
   const currentUserLimit = currentPersonnelUser?.generationLimit || defaultGenerationLimit;
   const currentUserCompleted = currentPersonnelUser?.completedGenerations || 0;
   const currentUserUnlimited = !!currentPersonnelUser?.allowUnlimited;
 
-  // Handle template selection to open Generation Studio Modal
+  // Unauthenticated Guard: Display Enterprise Auth Screen if not logged in
+  if (!isAuthenticated) {
+    return (
+      <AuthView
+        onAuth={handleAuth}
+        initialEmail={currentUserEmail}
+      />
+    );
+  }
+
   const handleSelectTemplate = (template: ApplianceTemplate) => {
     setActiveStudioTemplate(template);
     setIsStudioModalOpen(true);
@@ -171,7 +310,7 @@ export default function App() {
       id: `log-${Date.now()}`,
       time: 'Just now',
       timestamp: new Date().toISOString(),
-      user: 'Farhad Abdollahi',
+      user: currentUserName,
       action: 'Generated Image',
       type: 'Generated Image',
       details: `Prompt: "${newAsset.prompt.slice(0, 45)}..." Model: ${newAsset.model} (Quota: ${currentUserCompleted + 1}/${currentUserLimit})`,
@@ -393,6 +532,8 @@ export default function App() {
     <div className="flex min-h-screen bg-[#FDFCF6] text-[#191c23] antialiased selection:bg-[#1A73E8] selection:text-white font-sans">
       {/* Desktop Navigation Sidebar */}
       <Sidebar
+        userName={currentUserName}
+        onLogout={handleLogout}
         currentView={currentView}
         onNavigate={(view) => {
           setCurrentView(view);
@@ -408,9 +549,10 @@ export default function App() {
         {/* Top Navbar */}
         <Navbar
           currentView={currentView}
+          onLogout={handleLogout}
           onNavigate={(view) => setCurrentView(view)}
           user={{
-            name: 'Farhad Abdollahi',
+            name: currentUserName,
             email: currentUserEmail,
             role: currentUserRole,
             avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
@@ -480,18 +622,18 @@ export default function App() {
           {currentView === 'profile' && (
             <ProfileView
               user={{
-                name: 'Farhad Abdollahi',
+                name: currentUserName,
                 email: currentUserEmail,
                 role: currentUserRole,
                 department: 'Enterprise AI Architecture',
-                initials: 'FA',
+                initials: currentUserName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase(),
                 avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
                 status: 'Active',
                 generationLimit: currentUserLimit,
                 completedGenerations: currentUserCompleted,
                 allowUnlimited: currentUserUnlimited,
               }}
-              auditLogs={auditLogs.filter((l) => l.user.includes('Farhad'))}
+              auditLogs={auditLogs.filter((l) => l.user === currentUserName)}
               userAssets={assets.filter((a) => a.creator.email === currentUserEmail)}
               onOpenGovernance={() => setCurrentView('governance')}
             />
