@@ -1,6 +1,24 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { GenerateParams, UseKieImageGeneratorResult } from '../types';
 
+const MAX_GENERATION_WAIT_MS = 4 * 60 * 1000;
+const INITIAL_POLL_DELAY_MS = 1500;
+const POLL_INTERVAL_MS = 3500;
+
+async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function getRemainingWaitMs(startedAt: number): number {
+  return Math.max(MAX_GENERATION_WAIT_MS - (Date.now() - startedAt), 0);
+}
+
 export function useKieImageGenerator(): UseKieImageGeneratorResult {
   const [loading, setLoading] = useState<boolean>(false);
   const [status, setStatus] = useState<string | null>(null);
@@ -43,13 +61,15 @@ export function useKieImageGenerator(): UseKieImageGeneratorResult {
         setElapsedSeconds((prev) => prev + 1);
       }, 1000);
 
+      const generationStartedAt = Date.now();
+
       try {
         // Step 1: Request task creation
-        const initRes = await fetch('/api/kie/generate', {
+        const initRes = await fetchWithTimeout('/api/kie/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(params),
-        });
+        }, getRemainingWaitMs(generationStartedAt));
 
         const initData = await initRes.json();
 
@@ -61,11 +81,17 @@ export function useKieImageGenerator(): UseKieImageGeneratorResult {
         setTaskId(currentTaskId);
         setStatus('PROCESSING');
 
-        // Step 2: Poll every 3 seconds until COMPLETED or FAILED
+        // Step 2: Poll until the provider returns a terminal state (COMPLETED/SUCCESS or FAILED),
+        // unless the full generation wait exceeds 4 minutes.
         return new Promise<string | null>((resolve, reject) => {
           const checkStatus = async () => {
             try {
-              const statusRes = await fetch(`/api/kie/status?taskId=${currentTaskId}`);
+              const remainingWaitMs = getRemainingWaitMs(generationStartedAt);
+              if (remainingWaitMs <= 0) {
+                throw new Error('Image generation timed out after 4 minutes. Please try again.');
+              }
+
+              const statusRes = await fetchWithTimeout(`/api/kie/status?taskId=${currentTaskId}`, {}, remainingWaitMs);
               const statusData = await statusRes.json();
 
               if (!statusRes.ok) {
@@ -91,6 +117,8 @@ export function useKieImageGenerator(): UseKieImageGeneratorResult {
                 const err = statusData.error || 'Image generation failed on server.';
                 setError(err);
                 reject(new Error(err));
+              } else {
+                scheduleNextStatusCheck();
               }
             } catch (err: any) {
               cancelPolling();
@@ -100,9 +128,17 @@ export function useKieImageGenerator(): UseKieImageGeneratorResult {
             }
           };
 
-          // Initial check after 1.5s
-          setTimeout(checkStatus, 1500);
-          pollTimerRef.current = setInterval(checkStatus, 3500);
+          const scheduleNextStatusCheck = () => {
+            const remainingWaitMs = getRemainingWaitMs(generationStartedAt);
+            if (remainingWaitMs <= 0) {
+              checkStatus();
+              return;
+            }
+            pollTimerRef.current = setTimeout(checkStatus, Math.min(POLL_INTERVAL_MS, remainingWaitMs));
+          };
+
+          const initialDelay = Math.min(INITIAL_POLL_DELAY_MS, getRemainingWaitMs(generationStartedAt));
+          pollTimerRef.current = setTimeout(checkStatus, initialDelay);
         });
       } catch (err: any) {
         cancelPolling();

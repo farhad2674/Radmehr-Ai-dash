@@ -467,6 +467,7 @@ export const StudioModal: React.FC<StudioModalProps> = ({
                               className="w-full px-3.5 py-2.5 bg-[#F1F4F9] border border-[#DADCE0] rounded-xl text-sm font-medium text-[#191c23] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:bg-white transition-all cursor-pointer disabled:opacity-50"
                             >
                               <option value="nano-banana-2">nano-banana-2 (Gemini Flash Image)</option>
+                              <option value="seedream/5-pro-image-to-image">Seedream 5.0 Pro (Image to Image)</option>
                               <option value="sedance-2.5-pro">sedance-2.5-pro (High Res Appliance)</option>
                               <option value="SDXL">SDXL 1.0 (Commercial Industrial)</option>
                               <option value="Midjourney v6">Midjourney v6 (Photorealistic Studio)</option>
