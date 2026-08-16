@@ -28,3 +28,13 @@
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.6);
 }
+
+@keyframes loading-progress {
+  0% {
+    width: 10%;
+  }
+
+  100% {
+    width: 90%;
+  }
+}
