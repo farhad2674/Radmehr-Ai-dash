@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  X, 
-  Sparkles, 
-  Layers, 
-  Download, 
-  Bookmark, 
-  Check, 
-  Copy, 
-  AlertCircle, 
-  Clock, 
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  X,
+  Sparkles,
+  Layers,
+  Download,
+  Bookmark,
+  Check,
+  Copy,
+  AlertCircle,
+  Clock,
   Maximize2,
   RefreshCw,
   ExternalLink,
@@ -27,6 +27,135 @@ import {
 } from 'lucide-react';
 import { ApplianceTemplate, GeneratedAsset, ExecutionModel, TemplateVariableMode } from '../types';
 import { useKieImageGenerator } from '../hooks/useKieImageGenerator';
+
+
+const GeneratingConceptAnimation: React.FC = () => {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const context = canvas.getContext('2d');
+    if (!context) return;
+
+    let animationFrame = 0;
+    const dotCount = 120;
+    const sphereRadius = 2;
+    const dots = Array.from({ length: dotCount }, (_, index) => {
+      const phi = Math.acos(-1 + (2 * index) / dotCount);
+      const theta = Math.sqrt(dotCount * Math.PI) * phi;
+
+      return {
+        x: sphereRadius * Math.cos(theta) * Math.sin(phi),
+        y: sphereRadius * Math.sin(theta) * Math.sin(phi),
+        z: sphereRadius * Math.cos(phi),
+        phase: Math.random() * Math.PI * 2,
+      };
+    });
+
+    const render = () => {
+      const rect = canvas.getBoundingClientRect();
+      const pixelRatio = window.devicePixelRatio || 1;
+      const width = Math.max(1, rect.width);
+      const height = Math.max(1, rect.height);
+
+      if (canvas.width !== Math.floor(width * pixelRatio) || canvas.height !== Math.floor(height * pixelRatio)) {
+        canvas.width = Math.floor(width * pixelRatio);
+        canvas.height = Math.floor(height * pixelRatio);
+      }
+
+      context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      context.clearRect(0, 0, width, height);
+
+      const time = Date.now() * 0.001;
+      const rotationY = time * 0.55;
+      const rotationX = time * 0.22;
+      const centerX = width / 2;
+      const centerY = height / 2;
+      const scale = Math.min(width, height) * 0.28;
+
+      const gradient = context.createRadialGradient(centerX, centerY, 0, centerX, centerY, Math.min(width, height) * 0.5);
+      gradient.addColorStop(0, 'rgba(26, 115, 232, 0.16)');
+      gradient.addColorStop(0.65, 'rgba(26, 115, 232, 0.06)');
+      gradient.addColorStop(1, 'rgba(26, 115, 232, 0)');
+      context.fillStyle = gradient;
+      context.beginPath();
+      context.arc(centerX, centerY, Math.min(width, height) * 0.48, 0, Math.PI * 2);
+      context.fill();
+
+      const projectedDots = dots.map((dot) => {
+        const breathingOffset = Math.sin(time * 2 + dot.phase) * 0.3;
+        const breathingScale = 1 + breathingOffset;
+        const x = dot.x * breathingScale;
+        const y = dot.y * breathingScale;
+        const z = dot.z * breathingScale;
+
+        const cosY = Math.cos(rotationY);
+        const sinY = Math.sin(rotationY);
+        const cosX = Math.cos(rotationX);
+        const sinX = Math.sin(rotationX);
+
+        const rotatedX = x * cosY - z * sinY;
+        const rotatedZ = x * sinY + z * cosY;
+        const rotatedY = y * cosX - rotatedZ * sinX;
+        const finalZ = y * sinX + rotatedZ * cosX;
+        const perspective = 5 / (5 - finalZ);
+
+        return {
+          x: centerX + rotatedX * scale * perspective,
+          y: centerY + rotatedY * scale * perspective,
+          radius: Math.max(2.2, 4.8 * perspective * (1 + Math.sin(time * 3 + dot.phase) * 0.2)),
+          alpha: 0.35 + Math.max(0, perspective - 0.75) * 0.85,
+          z: finalZ,
+        };
+      }).sort((a, b) => a.z - b.z);
+
+      projectedDots.forEach((dot) => {
+        context.beginPath();
+        context.fillStyle = `rgba(26, 115, 232, ${Math.min(1, dot.alpha)})`;
+        context.shadowBlur = 12;
+        context.shadowColor = 'rgba(26, 115, 232, 0.38)';
+        context.arc(dot.x, dot.y, dot.radius, 0, Math.PI * 2);
+        context.fill();
+      });
+
+      context.shadowBlur = 0;
+      animationFrame = requestAnimationFrame(render);
+    };
+
+    render();
+
+    return () => cancelAnimationFrame(animationFrame);
+  }, []);
+
+  return (
+    <div className="flex flex-col items-center justify-center text-center space-y-5 py-4">
+      <div className="relative w-64 h-64 md:w-80 md:h-80 rounded-full overflow-hidden flex items-center justify-center">
+        <div className="absolute inset-0 bg-[#1A73E8]/5 rounded-full blur-3xl mix-blend-multiply" />
+        <canvas ref={canvasRef} className="relative z-10 w-full h-full" aria-hidden="true" />
+      </div>
+
+      <div className="space-y-2 flex flex-col items-center">
+        <h4 className="text-2xl font-semibold text-[#191c23] flex items-center gap-2">
+          Generating your concept
+          <span aria-hidden="true" className="flex space-x-1 ml-1">
+            <span className="w-1.5 h-1.5 bg-[#1A73E8] rounded-full animate-pulse" style={{ animationDelay: '0s' }} />
+            <span className="w-1.5 h-1.5 bg-[#1A73E8] rounded-full animate-pulse" style={{ animationDelay: '0.2s' }} />
+            <span className="w-1.5 h-1.5 bg-[#1A73E8] rounded-full animate-pulse" style={{ animationDelay: '0.4s' }} />
+          </span>
+        </h4>
+        <p className="text-sm text-[#414754] max-w-md">
+          Fine-tuning details for a high-fidelity render
+        </p>
+      </div>
+
+      <div className="w-full max-w-xs bg-[#E0E2EC] rounded-full h-1 overflow-hidden">
+        <div className="bg-[#1A73E8] h-full rounded-full animate-[loading-progress_4s_ease-in-out_infinite_alternate]" />
+      </div>
+    </div>
+  );
+};
 
 interface StudioModalProps {
   template: ApplianceTemplate | null;
@@ -56,13 +185,14 @@ export const StudioModal: React.FC<StudioModalProps> = ({
   const [customTitle, setCustomTitle] = useState<string>('Smart Inverter Tech - 2026 Edition');
   const [customEnvironment, setCustomEnvironment] = useState<string>('bright modern minimalist Scandinavian kitchen with marble island');
   const [customLighting, setCustomLighting] = useState<string>('soft natural daylight streaming through floor-to-ceiling windows');
-  
+
   const [selectedModel, setSelectedModel] = useState<ExecutionModel>('nano-banana-2');
   const [aspectRatio, setAspectRatio] = useState<string>('16:9');
   const [resultImageUrl, setResultImageUrl] = useState<string | null>(null);
   const [copiedPrompt, setCopiedPrompt] = useState<boolean>(false);
   const [savedToLibrary, setSavedToLibrary] = useState<boolean>(false);
   const [attachedRefImage, setAttachedRefImage] = useState<string | null>(null);
+  const [hasGenerationStarted, setHasGenerationStarted] = useState<boolean>(false);
 
   const { generateImage, loading, status, error, cancelPolling, taskId, elapsedSeconds } =
     useKieImageGenerator();
@@ -72,7 +202,7 @@ export const StudioModal: React.FC<StudioModalProps> = ({
   const remainingGenerations = userAllowUnlimited ? 999999 : Math.max(0, userGenerationLimit - userCompletedGenerations);
 
   // Derive active variable mode
-  const variableMode: TemplateVariableMode = template?.variableMode || 
+  const variableMode: TemplateVariableMode = template?.variableMode ||
     (template?.fieldPermissions?.applianceObject && template?.fieldPermissions?.text1 ? 'both_object_and_title' :
      template?.fieldPermissions?.applianceObject ? 'object_only' :
      template?.fieldPermissions?.text1 ? 'title_only' : 'both_object_and_title');
@@ -117,6 +247,7 @@ export const StudioModal: React.FC<StudioModalProps> = ({
       setResultImageUrl(null);
       setSavedToLibrary(false);
       setAttachedRefImage(template.referenceImageUrl || null);
+      setHasGenerationStarted(false);
     }
   }, [template]);
 
@@ -124,7 +255,7 @@ export const StudioModal: React.FC<StudioModalProps> = ({
 
   const constructFinalPrompt = (): string => {
     let p = template.basePrompt;
-    
+
     // Replace modular placeholders
     p = p.replace(/\{\{OBJECT\}\}/g, customAppliance);
     p = p.replace(/\{\{TEXT_ZONE\}\}/g, customTitle);
@@ -153,14 +284,23 @@ export const StudioModal: React.FC<StudioModalProps> = ({
     if (isLimitReached) return;
 
     const finalPrompt = constructFinalPrompt();
+    setHasGenerationStarted(true);
+    setResultImageUrl(null);
+    setSavedToLibrary(false);
 
-    const imageUrl = await generateImage({
-      prompt: finalPrompt,
-      model: selectedModel,
-      referenceImageUrl: attachedRefImage || template.referenceImageUrl,
-      aspectRatio,
-      templateId: template.id,
-    });
+    let imageUrl: string | null = null;
+
+    try {
+      imageUrl = await generateImage({
+        prompt: finalPrompt,
+        model: selectedModel,
+        referenceImageUrl: attachedRefImage || template.referenceImageUrl,
+        aspectRatio,
+        templateId: template.id,
+      });
+    } catch {
+      imageUrl = null;
+    }
 
     if (imageUrl) {
       setResultImageUrl(imageUrl);
@@ -211,7 +351,7 @@ export const StudioModal: React.FC<StudioModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
       <div className="bg-white rounded-2xl shadow-soft-lg border border-[#DADCE0] w-full max-w-3xl overflow-hidden my-6 transition-all duration-200">
-        
+
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-[#E0E2EC] flex items-center justify-between bg-[#F8F9FD]">
           <div className="flex items-center gap-3">
@@ -228,8 +368,8 @@ export const StudioModal: React.FC<StudioModalProps> = ({
               <div className="flex items-center gap-2 mt-0.5">
                 <p className="text-xs text-[#5F6368]">{template.name}</p>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-50 text-[#1A73E8] border border-blue-200/50">
-                  {variableMode === 'object_only' ? 'Mode: 1. Object Swappable' : 
-                   variableMode === 'title_only' ? 'Mode: 2. Title Only' : 
+                  {variableMode === 'object_only' ? 'Mode: 1. Object Swappable' :
+                   variableMode === 'title_only' ? 'Mode: 2. Title Only' :
                    variableMode === 'both_object_and_title' ? 'Mode: 3. Both Object & Title' :
                    variableMode === 'full_custom' ? 'Mode: 4. Full Custom' : 'Mode: 5. Fixed Preset'}
                 </span>
@@ -278,7 +418,7 @@ export const StudioModal: React.FC<StudioModalProps> = ({
 
         {/* Modal Body */}
         <div className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
-          
+
           {/* Quota Exhaustion Alert */}
           {isLimitReached && (
             <div className="p-4 bg-red-50 border border-red-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in">
@@ -312,286 +452,385 @@ export const StudioModal: React.FC<StudioModalProps> = ({
             </div>
           )}
 
+          {!hasGenerationStarted ? (
+            <>
           {/* Model & Aspect Ratio Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-[#414754] uppercase tracking-wider mb-1.5">
-                Execution Model
-              </label>
-              <select
-                value={selectedModel}
-                onChange={(e) => setSelectedModel(e.target.value as ExecutionModel)}
-                disabled={loading || isLimitReached}
-                className="w-full px-3.5 py-2.5 bg-[#F1F4F9] border border-[#DADCE0] rounded-xl text-sm font-medium text-[#191c23] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:bg-white transition-all cursor-pointer disabled:opacity-50"
-              >
-                <option value="nano-banana-2">nano-banana-2 (Gemini Flash Image)</option>
-                <option value="sedance-2.5-pro">sedance-2.5-pro (High Res Appliance)</option>
-                <option value="SDXL">SDXL 1.0 (Commercial Industrial)</option>
-                <option value="Midjourney v6">Midjourney v6 (Photorealistic Studio)</option>
-              </select>
-            </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs font-semibold text-[#414754] uppercase tracking-wider mb-1.5">
+                              Execution Model
+                            </label>
+                            <select
+                              value={selectedModel}
+                              onChange={(e) => setSelectedModel(e.target.value as ExecutionModel)}
+                              disabled={loading || isLimitReached}
+                              className="w-full px-3.5 py-2.5 bg-[#F1F4F9] border border-[#DADCE0] rounded-xl text-sm font-medium text-[#191c23] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:bg-white transition-all cursor-pointer disabled:opacity-50"
+                            >
+                              <option value="nano-banana-2">nano-banana-2 (Gemini Flash Image)</option>
+                              <option value="sedance-2.5-pro">sedance-2.5-pro (High Res Appliance)</option>
+                              <option value="SDXL">SDXL 1.0 (Commercial Industrial)</option>
+                              <option value="Midjourney v6">Midjourney v6 (Photorealistic Studio)</option>
+                            </select>
+                          </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-[#414754] uppercase tracking-wider mb-1.5">
-                Aspect Ratio
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {['16:9', '1:1', '4:3'].map((ratio) => (
-                  <button
-                    key={ratio}
-                    type="button"
-                    onClick={() => setAspectRatio(ratio)}
-                    disabled={loading || isLimitReached}
-                    className={`py-2 px-3 rounded-xl text-xs font-medium border transition-all cursor-pointer ${
-                      aspectRatio === ratio
-                        ? 'bg-[#E8F0FE] border-[#1A73E8] text-[#1A73E8]'
-                        : 'bg-[#F1F4F9] border-[#DADCE0] text-[#5F6368] hover:bg-white'
-                    } disabled:opacity-50`}
-                  >
-                    {ratio} {ratio === '16:9' ? '(Landscape)' : ratio === '1:1' ? '(Square)' : '(Standard)'}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-[#414754] uppercase tracking-wider mb-1.5">
+                              Aspect Ratio
+                            </label>
+                            <div className="grid grid-cols-3 gap-2">
+                              {['16:9', '1:1', '4:3'].map((ratio) => (
+                                <button
+                                  key={ratio}
+                                  type="button"
+                                  onClick={() => setAspectRatio(ratio)}
+                                  disabled={loading || isLimitReached}
+                                  className={`py-2 px-3 rounded-xl text-xs font-medium border transition-all cursor-pointer ${
+                                    aspectRatio === ratio
+                                      ? 'bg-[#E8F0FE] border-[#1A73E8] text-[#1A73E8]'
+                                      : 'bg-[#F1F4F9] border-[#DADCE0] text-[#5F6368] hover:bg-white'
+                                  } disabled:opacity-50`}
+                                >
+                                  {ratio} {ratio === '16:9' ? '(Landscape)' : ratio === '1:1' ? '(Square)' : '(Standard)'}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
 
-          {/* DYNAMIC VARIABLE SECTION: APPLIANCE / REFERENCE OBJECT */}
-          <div className={`p-4 rounded-2xl border transition-all ${
-            canChangeObject 
-              ? 'bg-white border-[#1A73E8]/40 shadow-xs' 
-              : 'bg-[#F8F9FD] border-[#E0E2EC]'
-          }`}>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-bold text-[#191c23] flex items-center gap-2">
-                <Box className={`w-4 h-4 ${canChangeObject ? 'text-[#1A73E8]' : 'text-gray-500'}`} />
-                Reference Appliance Object
-                <code className="text-[11px] font-mono text-[#1A73E8] bg-blue-50 px-1.5 py-0.5 rounded">{`{{OBJECT}}`}</code>
-              </label>
-              <span className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1 ${
-                canChangeObject 
-                  ? 'bg-green-100 text-green-800' 
-                  : 'bg-gray-200 text-gray-700'
-              }`}>
-                {canChangeObject ? <CheckCircle2 className="w-3 h-3 text-green-600" /> : <Lock className="w-3 h-3 text-gray-500" />}
-                {canChangeObject ? 'Editable in this Template' : '🔒 Fixed by Template (Locked)'}
-              </span>
-            </div>
+                        {/* DYNAMIC VARIABLE SECTION: APPLIANCE / REFERENCE OBJECT */}
+                        <div className={`p-4 rounded-2xl border transition-all ${
+                          canChangeObject
+                            ? 'bg-white border-[#1A73E8]/40 shadow-xs'
+                            : 'bg-[#F8F9FD] border-[#E0E2EC]'
+                        }`}>
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="text-xs font-bold text-[#191c23] flex items-center gap-2">
+                              <Box className={`w-4 h-4 ${canChangeObject ? 'text-[#1A73E8]' : 'text-gray-500'}`} />
+                              Reference Appliance Object
+                              <code className="text-[11px] font-mono text-[#1A73E8] bg-blue-50 px-1.5 py-0.5 rounded">{`{{OBJECT}}`}</code>
+                            </label>
+                            <span className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1 ${
+                              canChangeObject
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-200 text-gray-700'
+                            }`}>
+                              {canChangeObject ? <CheckCircle2 className="w-3 h-3 text-green-600" /> : <Lock className="w-3 h-3 text-gray-500" />}
+                              {canChangeObject ? 'Editable in this Template' : '🔒 Fixed by Template (Locked)'}
+                            </span>
+                          </div>
 
-            {canChangeObject ? (
-              <div className="space-y-2.5">
-                <input
-                  type="text"
-                  value={customAppliance}
-                  onChange={(e) => setCustomAppliance(e.target.value)}
-                  placeholder="e.g. four-door smart refrigerator, washing machine, espresso maker..."
-                  disabled={loading || isLimitReached}
-                  className="w-full px-3.5 py-2.5 bg-[#F1F4F9] border border-[#DADCE0] rounded-xl text-sm font-medium text-[#191c23] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:bg-white transition-all shadow-inner disabled:opacity-50"
-                />
-                
-                {/* Quick Appliance Swaps */}
-                <div className="space-y-1">
-                  <span className="text-[11px] font-medium text-[#5F6368]">Quick Appliance Swaps:</span>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {quickApplianceSwaps.map((item) => (
-                      <button
-                        key={item.label}
-                        type="button"
-                        onClick={() => setCustomAppliance(item.value)}
-                        disabled={loading || isLimitReached}
-                        className={`text-xs px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
-                          customAppliance === item.value
-                            ? 'bg-[#1A73E8] text-white border-[#1A73E8] shadow-2xs font-semibold'
-                            : 'bg-white text-[#414754] border-[#DADCE0] hover:border-[#1A73E8] hover:bg-blue-50/50'
-                        } disabled:opacity-50`}
-                      >
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="p-3 bg-white rounded-xl border border-[#DADCE0] flex items-center justify-between text-xs">
-                <span className="font-mono text-[#191c23] font-medium">{customAppliance}</span>
-                <span className="text-[11px] text-[#727785] italic">Appliance object is locked by creator</span>
-              </div>
-            )}
-          </div>
+                          {canChangeObject ? (
+                            <div className="space-y-2.5">
+                              <input
+                                type="text"
+                                value={customAppliance}
+                                onChange={(e) => setCustomAppliance(e.target.value)}
+                                placeholder="e.g. four-door smart refrigerator, washing machine, espresso maker..."
+                                disabled={loading || isLimitReached}
+                                className="w-full px-3.5 py-2.5 bg-[#F1F4F9] border border-[#DADCE0] rounded-xl text-sm font-medium text-[#191c23] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:bg-white transition-all shadow-inner disabled:opacity-50"
+                              />
 
-          {/* DYNAMIC VARIABLE SECTION: TITLE / TEXT OVERLAY */}
-          <div className={`p-4 rounded-2xl border transition-all ${
-            canChangeTitle 
-              ? 'bg-white border-purple-300 shadow-xs' 
-              : 'bg-[#F8F9FD] border-[#E0E2EC]'
-          }`}>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-bold text-[#191c23] flex items-center gap-2">
-                <Tag className={`w-4 h-4 ${canChangeTitle ? 'text-purple-600' : 'text-gray-500'}`} />
-                Title / Text Overlay in Image
-                <code className="text-[11px] font-mono text-[#1A73E8] bg-blue-50 px-1.5 py-0.5 rounded">{`{{TEXT_ZONE}}`}</code>
-              </label>
-              <span className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1 ${
-                canChangeTitle 
-                  ? 'bg-purple-100 text-purple-800' 
-                  : 'bg-gray-200 text-gray-700'
-              }`}>
-                {canChangeTitle ? <CheckCircle2 className="w-3 h-3 text-purple-600" /> : <Lock className="w-3 h-3 text-gray-500" />}
-                {canChangeTitle ? 'Editable in this Template' : '🔒 Fixed by Template (Locked)'}
-              </span>
-            </div>
+                              {/* Quick Appliance Swaps */}
+                              <div className="space-y-1">
+                                <span className="text-[11px] font-medium text-[#5F6368]">Quick Appliance Swaps:</span>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  {quickApplianceSwaps.map((item) => (
+                                    <button
+                                      key={item.label}
+                                      type="button"
+                                      onClick={() => setCustomAppliance(item.value)}
+                                      disabled={loading || isLimitReached}
+                                      className={`text-xs px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                                        customAppliance === item.value
+                                          ? 'bg-[#1A73E8] text-white border-[#1A73E8] shadow-2xs font-semibold'
+                                          : 'bg-white text-[#414754] border-[#DADCE0] hover:border-[#1A73E8] hover:bg-blue-50/50'
+                                      } disabled:opacity-50`}
+                                    >
+                                      {item.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="p-3 bg-white rounded-xl border border-[#DADCE0] flex items-center justify-between text-xs">
+                              <span className="font-mono text-[#191c23] font-medium">{customAppliance}</span>
+                              <span className="text-[11px] text-[#727785] italic">Appliance object is locked by creator</span>
+                            </div>
+                          )}
+                        </div>
 
-            {canChangeTitle ? (
-              <div className="space-y-2.5">
-                <input
-                  type="text"
-                  value={customTitle}
-                  onChange={(e) => setCustomTitle(e.target.value)}
-                  placeholder="e.g. Smart Inverter Tech - 2026 Edition"
-                  disabled={loading || isLimitReached}
-                  className="w-full px-3.5 py-2.5 bg-[#F1F4F9] border border-[#DADCE0] rounded-xl text-sm font-medium text-[#191c23] focus:outline-none focus:ring-2 focus:ring-purple-600 focus:bg-white transition-all shadow-inner disabled:opacity-50"
-                />
+                        {/* DYNAMIC VARIABLE SECTION: TITLE / TEXT OVERLAY */}
+                        <div className={`p-4 rounded-2xl border transition-all ${
+                          canChangeTitle
+                            ? 'bg-white border-purple-300 shadow-xs'
+                            : 'bg-[#F8F9FD] border-[#E0E2EC]'
+                        }`}>
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="text-xs font-bold text-[#191c23] flex items-center gap-2">
+                              <Tag className={`w-4 h-4 ${canChangeTitle ? 'text-purple-600' : 'text-gray-500'}`} />
+                              Title / Text Overlay in Image
+                              <code className="text-[11px] font-mono text-[#1A73E8] bg-blue-50 px-1.5 py-0.5 rounded">{`{{TEXT_ZONE}}`}</code>
+                            </label>
+                            <span className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1 ${
+                              canChangeTitle
+                                ? 'bg-purple-100 text-purple-800'
+                                : 'bg-gray-200 text-gray-700'
+                            }`}>
+                              {canChangeTitle ? <CheckCircle2 className="w-3 h-3 text-purple-600" /> : <Lock className="w-3 h-3 text-gray-500" />}
+                              {canChangeTitle ? 'Editable in this Template' : '🔒 Fixed by Template (Locked)'}
+                            </span>
+                          </div>
 
-                {/* Quick Title Presets */}
-                <div className="space-y-1">
-                  <span className="text-[11px] font-medium text-[#5F6368]">Suggested Titles:</span>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {quickTitleOptions.map((title) => (
-                      <button
-                        key={title}
-                        type="button"
-                        onClick={() => setCustomTitle(title)}
-                        disabled={loading || isLimitReached}
-                        className={`text-xs px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
-                          customTitle === title
-                            ? 'bg-purple-700 text-white border-purple-700 shadow-2xs font-semibold'
-                            : 'bg-white text-[#414754] border-[#DADCE0] hover:border-purple-600 hover:bg-purple-50/50'
-                        } disabled:opacity-50`}
-                      >
-                        {title}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="p-3 bg-white rounded-xl border border-[#DADCE0] flex items-center justify-between text-xs">
-                <span className="font-mono text-[#191c23] font-medium">{customTitle}</span>
-                <span className="text-[11px] text-[#727785] italic">Title text is locked by creator</span>
-              </div>
-            )}
-          </div>
+                          {canChangeTitle ? (
+                            <div className="space-y-2.5">
+                              <input
+                                type="text"
+                                value={customTitle}
+                                onChange={(e) => setCustomTitle(e.target.value)}
+                                placeholder="e.g. Smart Inverter Tech - 2026 Edition"
+                                disabled={loading || isLimitReached}
+                                className="w-full px-3.5 py-2.5 bg-[#F1F4F9] border border-[#DADCE0] rounded-xl text-sm font-medium text-[#191c23] focus:outline-none focus:ring-2 focus:ring-purple-600 focus:bg-white transition-all shadow-inner disabled:opacity-50"
+                              />
 
-          {/* LOCKED / FULL-CUSTOM: ENVIRONMENT & MOOD LIGHTING */}
-          <div className="p-4 rounded-2xl bg-[#F8F9FD] border border-[#E0E2EC] space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-[#414754] uppercase tracking-wider flex items-center gap-1.5">
-                <Home className="w-3.5 h-3.5 text-blue-600" />
-                Environment & Lighting Scene Anchors
-              </span>
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-200 text-gray-700 flex items-center gap-1">
-                <Lock className="w-3 h-3 text-gray-500" />
-                {canChangeEnvironment ? 'Customizable' : 'Fixed by Template'}
-              </span>
-            </div>
+                              {/* Quick Title Presets */}
+                              <div className="space-y-1">
+                                <span className="text-[11px] font-medium text-[#5F6368]">Suggested Titles:</span>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  {quickTitleOptions.map((title) => (
+                                    <button
+                                      key={title}
+                                      type="button"
+                                      onClick={() => setCustomTitle(title)}
+                                      disabled={loading || isLimitReached}
+                                      className={`text-xs px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                                        customTitle === title
+                                          ? 'bg-purple-700 text-white border-purple-700 shadow-2xs font-semibold'
+                                          : 'bg-white text-[#414754] border-[#DADCE0] hover:border-purple-600 hover:bg-purple-50/50'
+                                      } disabled:opacity-50`}
+                                    >
+                                      {title}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="p-3 bg-white rounded-xl border border-[#DADCE0] flex items-center justify-between text-xs">
+                              <span className="font-mono text-[#191c23] font-medium">{customTitle}</span>
+                              <span className="text-[11px] text-[#727785] italic">Title text is locked by creator</span>
+                            </div>
+                          )}
+                        </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-              <div className="p-3 bg-white rounded-xl border border-[#DADCE0]">
-                <span className="text-[10px] font-bold text-[#5F6368] uppercase flex items-center gap-1 mb-1">
-                  <Home className="w-3 h-3 text-blue-500" /> Place Setting
-                </span>
-                <p className="font-mono text-[#191c23] leading-relaxed">
-                  {customEnvironment}
-                </p>
-              </div>
+                        {/* LOCKED / FULL-CUSTOM: ENVIRONMENT & MOOD LIGHTING */}
+                        <div className="p-4 rounded-2xl bg-[#F8F9FD] border border-[#E0E2EC] space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-[#414754] uppercase tracking-wider flex items-center gap-1.5">
+                              <Home className="w-3.5 h-3.5 text-blue-600" />
+                              Environment & Lighting Scene Anchors
+                            </span>
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-200 text-gray-700 flex items-center gap-1">
+                              <Lock className="w-3 h-3 text-gray-500" />
+                              {canChangeEnvironment ? 'Customizable' : 'Fixed by Template'}
+                            </span>
+                          </div>
 
-              <div className="p-3 bg-white rounded-xl border border-[#DADCE0]">
-                <span className="text-[10px] font-bold text-[#5F6368] uppercase flex items-center gap-1 mb-1">
-                  <Sun className="w-3 h-3 text-amber-500" /> Mood & Lighting
-                </span>
-                <p className="font-mono text-[#191c23] leading-relaxed">
-                  {customLighting}
-                </p>
-              </div>
-            </div>
-          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                            <div className="p-3 bg-white rounded-xl border border-[#DADCE0]">
+                              <span className="text-[10px] font-bold text-[#5F6368] uppercase flex items-center gap-1 mb-1">
+                                <Home className="w-3 h-3 text-blue-500" /> Place Setting
+                              </span>
+                              <p className="font-mono text-[#191c23] leading-relaxed">
+                                {customEnvironment}
+                              </p>
+                            </div>
 
-          {/* Prompt Preview Accordion */}
-          <div className="bg-[#F8F9FD] border border-[#E0E2EC] rounded-xl p-3.5">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-[#5F6368] flex items-center gap-1.5">
-                <Layers className="w-3.5 h-3.5 text-[#1A73E8]" />
-                Compiled Prompt Payload (Dynamic Engine)
-              </span>
-              <button
-                type="button"
-                onClick={handleCopyPrompt}
-                className="text-xs text-[#1A73E8] hover:underline flex items-center gap-1 font-medium cursor-pointer"
-              >
-                {copiedPrompt ? <Check className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
-                {copiedPrompt ? 'Copied' : 'Copy Prompt'}
-              </button>
-            </div>
-            <p className="text-xs text-[#414754] font-mono leading-relaxed line-clamp-3 bg-white p-2.5 rounded-lg border border-[#E0E2EC]/70">
-              {constructFinalPrompt()}
-            </p>
-          </div>
+                            <div className="p-3 bg-white rounded-xl border border-[#DADCE0]">
+                              <span className="text-[10px] font-bold text-[#5F6368] uppercase flex items-center gap-1 mb-1">
+                                <Sun className="w-3 h-3 text-amber-500" /> Mood & Lighting
+                              </span>
+                              <p className="font-mono text-[#191c23] leading-relaxed">
+                                {customLighting}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
 
-          {/* Generation Action Button & Polling Indicator */}
-          <div>
-            <button
-              id="studio-modal-generate-btn"
-              onClick={handleGenerate}
-              disabled={loading || isLimitReached}
-              className={`w-full font-medium py-3 px-4 rounded-full transition-all flex items-center justify-center gap-2 shadow-sm text-sm cursor-pointer ${
-                isLimitReached
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-[#1A73E8] hover:bg-[#1557B0] active:scale-[0.99] text-white disabled:opacity-50'
-              }`}
-            >
-              {loading ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                  <span>
-                    Generating Visual... ({status || 'PROCESSING'}) • Polling every 5s ({elapsedSeconds}s)
-                  </span>
-                </>
-              ) : isLimitReached ? (
-                <>
-                  <Lock className="w-4 h-4 text-gray-500" />
-                  <span>Generation Limit Exhausted ({userCompletedGenerations}/{userGenerationLimit})</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 text-white" />
-                  <span>Create Visual ({remainingGenerations} Remaining in Quota)</span>
-                </>
+                        {/* Prompt Preview Accordion */}
+                        <div className="bg-[#F8F9FD] border border-[#E0E2EC] rounded-xl p-3.5">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-semibold text-[#5F6368] flex items-center gap-1.5">
+                              <Layers className="w-3.5 h-3.5 text-[#1A73E8]" />
+                              Compiled Prompt Payload (Dynamic Engine)
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleCopyPrompt}
+                              className="text-xs text-[#1A73E8] hover:underline flex items-center gap-1 font-medium cursor-pointer"
+                            >
+                              {copiedPrompt ? <Check className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
+                              {copiedPrompt ? 'Copied' : 'Copy Prompt'}
+                            </button>
+                          </div>
+                          <p className="text-xs text-[#414754] font-mono leading-relaxed line-clamp-3 bg-white p-2.5 rounded-lg border border-[#E0E2EC]/70">
+                            {constructFinalPrompt()}
+                          </p>
+                        </div>
+
+                        {/* Generation Action Button & Polling Indicator */}
+                        <div>
+                          <button
+                            id="studio-modal-generate-btn"
+                            onClick={handleGenerate}
+                            disabled={loading || isLimitReached}
+                            className={`w-full font-medium py-3 px-4 rounded-full transition-all flex items-center justify-center gap-2 shadow-sm text-sm cursor-pointer ${
+                              isLimitReached
+                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                : 'bg-[#1A73E8] hover:bg-[#1557B0] active:scale-[0.99] text-white disabled:opacity-50'
+                            }`}
+                          >
+                            {loading ? (
+                              <>
+                                <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                                <span>
+                                  Generating Visual... ({status || 'PROCESSING'}) • Polling every 5s ({elapsedSeconds}s)
+                                </span>
+                              </>
+                            ) : isLimitReached ? (
+                              <>
+                                <Lock className="w-4 h-4 text-gray-500" />
+                                <span>Generation Limit Exhausted ({userCompletedGenerations}/{userGenerationLimit})</span>
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="w-4 h-4 text-white" />
+                                <span>Create Visual ({remainingGenerations} Remaining in Quota)</span>
+                              </>
+                            )}
+                          </button>
+
+                          {loading && (
+                            <div className="mt-3 flex items-center justify-between text-xs text-[#5F6368] bg-[#E8F0FE]/60 px-4 py-2.5 rounded-xl border border-blue-100 animate-pulse">
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-[#1A73E8] animate-ping" />
+                                <span>Task ID: <span className="font-mono">{taskId || 'Establishing connection...'}</span></span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  cancelPolling();
+                                  setHasGenerationStarted(false);
+                                }}
+                                className="text-[#ba1a1a] hover:underline font-medium cursor-pointer"
+                              >
+                                Cancel Polling
+                              </button>
+                            </div>
+                          )}
+
+                          {error && (
+                            <div className="mt-3 p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs text-[#ba1a1a] flex items-center gap-2">
+                              <AlertCircle className="w-4 h-4 shrink-0" />
+                              <span>{error}</span>
+                            </div>
+                          )}
+                        </div>
+
+            </>
+          ) : (
+            <div className="space-y-4 animate-fade-in">
+              {loading && !resultImageUrl && !error && (
+                <GeneratingConceptAnimation />
               )}
-            </button>
 
-            {loading && (
-              <div className="mt-3 flex items-center justify-between text-xs text-[#5F6368] bg-[#E8F0FE]/60 px-4 py-2.5 rounded-xl border border-blue-100 animate-pulse">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-[#1A73E8] animate-ping" />
-                  <span>Task ID: <span className="font-mono">{taskId || 'Establishing connection...'}</span></span>
+              <div className={`p-5 rounded-2xl border ${
+                resultImageUrl
+                  ? 'bg-green-50 border-green-200'
+                  : error
+                    ? 'bg-red-50 border-red-200'
+                    : 'bg-[#E8F0FE]/70 border-blue-200'
+              }`}>
+                <div className="flex items-start gap-4">
+                  <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
+                    resultImageUrl
+                      ? 'bg-green-100 text-green-700'
+                      : error
+                        ? 'bg-red-100 text-red-700'
+                        : 'bg-blue-100 text-[#1A73E8]'
+                  }`}>
+                    {resultImageUrl ? (
+                      <Check className="w-5 h-5" />
+                    ) : error ? (
+                      <AlertCircle className="w-5 h-5" />
+                    ) : (
+                      <RefreshCw className="w-5 h-5 animate-spin" />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-sm font-bold text-[#191c23]">
+                      {resultImageUrl
+                        ? 'Your generated image is ready'
+                        : error
+                          ? 'Generation needs attention'
+                          : 'Generating your image'}
+                    </h4>
+                    <p className="mt-1 text-xs leading-relaxed text-[#5F6368]">
+                      {resultImageUrl
+                        ? 'Preview the final result below, download it, save it, or re-run the same template.'
+                        : error
+                          ? error
+                          : 'Please keep this popup open while we process the template. The setup inputs are hidden during generation so the focus stays on status and the final result.'}
+                    </p>
+                    <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-[#414754]">
+                      <span className="px-2.5 py-1 rounded-full bg-white/80 border border-white font-mono">Status: {status || (loading ? 'PROCESSING' : 'PENDING')}</span>
+                      <span className="px-2.5 py-1 rounded-full bg-white/80 border border-white font-mono">Elapsed: {elapsedSeconds}s</span>
+                      <span className="px-2.5 py-1 rounded-full bg-white/80 border border-white font-mono truncate max-w-full">Task: {taskId || 'Starting...'}</span>
+                    </div>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={cancelPolling}
-                  className="text-[#ba1a1a] hover:underline font-medium cursor-pointer"
-                >
-                  Cancel Polling
-                </button>
               </div>
-            )}
 
-            {error && (
-              <div className="mt-3 p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs text-[#ba1a1a] flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
-          </div>
+              {loading && (
+                <div className="flex items-center justify-between text-xs text-[#5F6368] bg-white px-4 py-2.5 rounded-xl border border-[#DADCE0] animate-pulse">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-[#1A73E8] animate-ping" />
+                    <span>Polling every 3.5s for the finished image.</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      cancelPolling();
+                      setHasGenerationStarted(false);
+                    }}
+                    className="text-[#ba1a1a] hover:underline font-medium cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
 
+              {error && !loading && !resultImageUrl && (
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <button
+                    type="button"
+                    onClick={handleGenerate}
+                    className="flex-1 bg-[#1A73E8] hover:bg-[#1557B0] text-white py-2.5 px-4 rounded-xl text-xs font-medium flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    Try Again
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setHasGenerationStarted(false)}
+                    className="flex-1 bg-[#F1F4F9] hover:bg-[#E0E2EC] text-[#414754] py-2.5 px-4 rounded-xl text-xs font-medium transition-colors cursor-pointer"
+                  >
+                    Edit Inputs
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
           {/* Generated Visual Result Display */}
           {resultImageUrl && (
             <div className="mt-4 pt-4 border-t border-[#E0E2EC] space-y-3 animate-fade-in">
