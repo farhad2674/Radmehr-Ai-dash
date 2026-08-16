@@ -3,8 +3,26 @@ import path from 'path';
 import { ApplianceTemplate, GeneratedAsset, PersonnelUser, AuditLogEntry } from '../src/types';
 import { INITIAL_TEMPLATES, INITIAL_ASSETS, INITIAL_USERS, INITIAL_AUDIT_LOGS } from '../src/data/initialData';
 
-const DATA_DIR = path.join(process.cwd(), 'data');
-const UPLOADS_DIR = path.join(process.cwd(), 'uploads');
+export const getUploadsDir = (): string => {
+  if (process.env.UPLOADS_DIR) return process.env.UPLOADS_DIR;
+  if (fs.existsSync('/app/uploads')) return '/app/uploads';
+  return path.join(process.cwd(), 'uploads');
+};
+
+export const getDataDir = (): string => {
+  if (process.env.DATA_DIR) return process.env.DATA_DIR;
+  if (fs.existsSync('/app/uploads')) {
+    const p = path.join('/app/uploads', 'data');
+    if (!fs.existsSync(p)) {
+      try { fs.mkdirSync(p, { recursive: true }); } catch (_) {}
+    }
+    return p;
+  }
+  return path.join(process.cwd(), 'data');
+};
+
+const DATA_DIR = getDataDir();
+const UPLOADS_DIR = getUploadsDir();
 
 // File paths
 const TEMPLATES_FILE = path.join(DATA_DIR, 'templates.json');

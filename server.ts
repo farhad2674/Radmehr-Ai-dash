@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
 import {
   initDiskStorage,
+  getUploadsDir,
   getTemplatesFromDisk,
   saveTemplateToDisk,
   deleteTemplateFromDisk,
@@ -39,10 +40,14 @@ initDiskStorage();
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Serve local static uploaded image assets directly from server disk
-const uploadsDir = path.join(process.cwd(), 'uploads');
+// Serve local static uploaded image assets directly from server disk (or persistent /app/uploads)
+const uploadsDir = getUploadsDir();
 if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
+  try {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  } catch (e) {
+    console.warn('[Server] Note on uploads directory creation:', e);
+  }
 }
 app.use('/uploads', express.static(uploadsDir));
 
