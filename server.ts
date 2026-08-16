@@ -51,6 +51,63 @@ if (!fs.existsSync(uploadsDir)) {
 }
 app.use('/uploads', express.static(uploadsDir));
 
+
+const KIE_TASK_RESPONSE_TIMEOUT_MS = Number(process.env.KIE_TASK_RESPONSE_TIMEOUT_MS || 4 * 60 * 1000);
+
+async function fetchJsonWithTimeout(url: string, init: RequestInit = {}, timeoutMs = 30000): Promise<{ response: globalThis.Response; data: any; rawText: string }> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, { ...init, signal: controller.signal });
+    const rawText = await response.text();
+    let data: any = {};
+    try {
+      data = rawText ? JSON.parse(rawText) : {};
+    } catch (parseErr) {
+      console.warn(`[HTTP] Non-JSON response from ${url}:`, rawText);
+    }
+    return { response, data, rawText };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function buildKieCreateTaskPayload(params: {
+  prompt: string;
+  model?: string;
+  referenceImageUrl?: string;
+  aspectRatio?: string;
+  resolution?: string;
+}): any {
+  const model = params.model || 'nano-banana-2';
+  const aspectRatio = params.aspectRatio || '1:1';
+
+  if (model === 'seedream/5-pro-image-to-image') {
+    return {
+      model,
+      input: {
+        prompt: params.prompt,
+        image_urls: params.referenceImageUrl ? [params.referenceImageUrl] : [],
+        aspect_ratio: aspectRatio === 'auto' ? '1:1' : aspectRatio,
+        quality: params.resolution === '2K' || params.resolution === '4K' ? 'high' : 'basic',
+        output_format: 'png',
+        nsfw_checker: true,
+      },
+    };
+  }
+
+  return {
+    model,
+    input: {
+      prompt: params.prompt,
+      image_input: params.referenceImageUrl ? [params.referenceImageUrl] : [],
+      aspect_ratio: aspectRatio === 'auto' ? 'auto' : aspectRatio,
+      resolution: params.resolution || '1K',
+      output_format: 'png',
+    },
+  };
+}
+
 // Initialize Google GenAI client
 let aiClient: GoogleGenAI | null = null;
 function getAI(): GoogleGenAI | null {
@@ -389,16 +446,7 @@ app.post('/api/kie/generate', async (req: Request, res: Response): Promise<void>
     // If real Kie.ai API key is supplied, attempt live forward with exact Kie.ai createTask specification
     if (kieApiKey && kieApiKey.trim() !== '' && kieApiKey !== 'your_kie_ai_api_key_here') {
       try {
-        const payload: any = {
-          model: model || 'nano-banana-2',
-          input: {
-            prompt,
-            image_input: referenceImageUrl ? [referenceImageUrl] : [],
-            aspect_ratio: aspectRatio === 'auto' ? 'auto' : (aspectRatio || '1:1'),
-            resolution: resolution || '1K',
-            output_format: 'png'
-          }
-        };
+        const payload: any = buildKieCreateTaskPayload({ prompt, model, referenceImageUrl, aspectRatio, resolution });
 
         if (process.env.APP_URL) {
           payload.callBackUrl = `${process.env.APP_URL.replace(/\/$/, '')}/api/kie/callback`;
@@ -406,16 +454,15 @@ app.post('/api/kie/generate', async (req: Request, res: Response): Promise<void>
 
         console.log('[Kie.ai] Submitting task to https://api.kie.ai/api/v1/jobs/createTask with model:', payload.model);
 
-        const kieRes = await fetch('https://api.kie.ai/api/v1/jobs/createTask', {
+        const { response: kieRes, data } = await fetchJsonWithTimeout('https://api.kie.ai/api/v1/jobs/createTask', {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${kieApiKey.trim()}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(payload),
-        });
+        }, KIE_TASK_RESPONSE_TIMEOUT_MS);
 
-        const data: any = await kieRes.json();
         console.log('[Kie.ai] createTask response:', JSON.stringify(data));
 
         const remoteTaskId = data.taskId || data.data?.taskId || (typeof data.data === 'string' ? data.data : null);
@@ -432,11 +479,20 @@ app.post('/api/kie/generate', async (req: Request, res: Response): Promise<void>
           });
           res.json({ taskId: remoteTaskId });
           return;
-        } else if (data.message || data.error) {
-          console.warn('[Kie.ai] API error message from server:', data.message || data.error);
+        } else {
+          const apiError = data.msg || data.message || data.error || `Kie.ai createTask failed with HTTP ${kieRes.status}`;
+          console.warn('[Kie.ai] createTask failed:', apiError);
+          res.status(kieRes.ok ? 502 : kieRes.status).json({ error: apiError, details: data });
+          return;
         }
       } catch (kieErr: any) {
-        console.warn('[Kie.ai] Request network notice, falling back to server disk engine:', kieErr?.message || kieErr);
+        const isAbort = kieErr?.name === 'AbortError';
+        const message = isAbort
+          ? `Kie.ai createTask timed out after ${Math.round(KIE_TASK_RESPONSE_TIMEOUT_MS / 1000)} seconds.`
+          : (kieErr?.message || 'Failed to contact Kie.ai createTask endpoint.');
+        console.warn('[Kie.ai] createTask request failed:', message);
+        res.status(504).json({ error: message });
+        return;
       }
     }
 
@@ -570,20 +626,18 @@ app.get('/api/kie/status', async (req: Request, res: Response): Promise<void> =>
       const recordInfoUrl = `https://api.kie.ai/api/v1/jobs/recordInfo?taskId=${encodeURIComponent(taskId)}`;
       console.log(`[Kie.ai] Polling recordInfo: ${recordInfoUrl}`);
 
-      const response = await fetch(recordInfoUrl, {
+      const { response, data } = await fetchJsonWithTimeout(recordInfoUrl, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${kieApiKey.trim()}`,
           'Content-Type': 'application/json',
         },
-      });
+      }, KIE_TASK_RESPONSE_TIMEOUT_MS);
 
-      const rawText = await response.text();
-      let data: any = {};
-      try {
-        data = JSON.parse(rawText);
-      } catch (parseErr) {
-        console.warn(`[Kie.ai] Non-JSON response for ${taskId}:`, rawText);
+      if (!response.ok) {
+        const apiError = data.msg || data.message || data.error || `Kie.ai recordInfo failed with HTTP ${response.status}`;
+        res.status(response.status).json({ status: 'FAILED', error: apiError });
+        return;
       }
 
       console.log(`[Kie.ai] recordInfo status response for ${taskId}:`, JSON.stringify(data));
@@ -629,6 +683,12 @@ app.get('/api/kie/status', async (req: Request, res: Response): Promise<void> =>
             // Cache remote image directly to local server disk to prevent 24h expiration & CORS issues
             const permanentDiskUrl = await cacheRemoteImageToDisk(foundImageUrl, 'kie_market');
 
+            if (job) {
+              job.status = 'COMPLETED';
+              job.imageUrl = permanentDiskUrl;
+              job.completedAt = Date.now();
+            }
+
             res.json({
               status: 'COMPLETED',
               imageUrl: permanentDiskUrl,
@@ -653,6 +713,11 @@ app.get('/api/kie/status', async (req: Request, res: Response): Promise<void> =>
         // 2. Fail state: extract failMsg or failCode
         else if (stateStr === 'fail' || stateStr === 'failed' || stateStr === 'error') {
           const errMsg = taskData.failMsg || taskData.failCode || data.msg || 'Kie.ai task failed during generation.';
+          if (job) {
+            job.status = 'FAILED';
+            job.error = errMsg;
+          }
+
           res.json({
             status: 'FAILED',
             error: errMsg,
@@ -681,9 +746,9 @@ app.get('/api/kie/status', async (req: Request, res: Response): Promise<void> =>
   const fallbackJob = activeJobs.get(taskId);
   if (fallbackJob) {
     res.json({
-      status: job.status,
-      imageUrl: job.imageUrl,
-      error: job.error || null,
+      status: fallbackJob.status,
+      imageUrl: fallbackJob.imageUrl,
+      error: fallbackJob.error || null,
     });
     return;
   }

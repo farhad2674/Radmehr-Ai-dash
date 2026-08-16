@@ -2,6 +2,7 @@ export type Role = 'Admin' | 'Supervisor' | 'Manager' | 'Editor' | 'Viewer';
 
 export type ExecutionModel =
   | 'nano-banana-2'
+  | 'seedream/5-pro-image-to-image'
   | 'sedance-2.5-pro'
   | 'SDXL'
   | 'Midjourney v6';
