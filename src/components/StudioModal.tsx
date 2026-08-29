@@ -26,7 +26,7 @@ import {
   Edit3
 } from 'lucide-react';
 import { ApplianceTemplate, GeneratedAsset, ExecutionModel, TemplateVariableMode } from '../types';
-import { useKieImageGenerator } from '../hooks/useKieImageGenerator';
+import { useOpenRouterImageGenerator } from '../hooks/useOpenRouterImageGenerator';
 
 
 const GeneratingConceptAnimation: React.FC = () => {
@@ -195,7 +195,7 @@ export const StudioModal: React.FC<StudioModalProps> = ({
   const [hasGenerationStarted, setHasGenerationStarted] = useState<boolean>(false);
 
   const { generateImage, loading, status, error, cancelPolling, taskId, elapsedSeconds } =
-    useKieImageGenerator();
+    useOpenRouterImageGenerator();
 
   // Check quota limit status
   const isLimitReached = !userAllowUnlimited && userCompletedGenerations >= userGenerationLimit;
@@ -907,7 +907,7 @@ export const StudioModal: React.FC<StudioModalProps> = ({
         <div className="px-6 py-3 bg-[#F8F9FD] border-t border-[#E0E2EC] flex items-center justify-between text-xs text-[#727785]">
           <div className="flex items-center gap-1.5">
             <ShieldCheck className="w-4 h-4 text-blue-600" />
-            <span>Kie.ai Protocol & Google GenAI Certified Engine</span>
+            <span>OpenRouter Protocol & Google GenAI Certified Engine</span>
           </div>
           <span>Quota: {userCompletedGenerations} / {userGenerationLimit} Images</span>
         </div>

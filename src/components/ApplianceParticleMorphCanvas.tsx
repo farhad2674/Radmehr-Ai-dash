@@ -91,7 +91,7 @@ const APPLIANCE_MODELS: ApplianceModel[] = [
     id: 'refrigerator',
     name: 'Smart French-Door Refrigerator',
     category: 'Kitchen Appliance',
-    modelEngine: 'nano-banana-2 • Kie.ai 8K',
+    modelEngine: 'nano-banana-2 • OpenRouter 8K',
     promptSnippet: 'Minimalist 4-door French refrigerator, tinted glass InstaView door, ice dispenser, brushed steel chassis',
     status: 'AI Latent Synthesis: 99.4%',
     colorTheme: '#38bdf8', // Cyan
@@ -192,7 +192,7 @@ const APPLIANCE_MODELS: ApplianceModel[] = [
     id: 'washer',
     name: 'Smart Front-Load Drum Washer',
     category: 'Laundry Care',
-    modelEngine: 'nano-banana-2 • Kie.ai 8K',
+    modelEngine: 'nano-banana-2 • OpenRouter 8K',
     promptSnippet: 'Matte obsidian front-load washer, glowing circular LED drum door, chrome bezel, touch dial',
     status: 'AI Latent Synthesis: 98.9%',
     colorTheme: '#818cf8', // Indigo
@@ -281,7 +281,7 @@ const APPLIANCE_MODELS: ApplianceModel[] = [
     id: 'air_conditioner',
     name: 'Smart Split Inverter AC Unit',
     category: 'Climate & Air Quality',
-    modelEngine: 'sedance-2.5-pro • Kie.ai 8K',
+    modelEngine: 'sedance-2.5-pro • OpenRouter 8K',
     promptSnippet: 'Wall-mounted aerostream smart air conditioner, curved aerodynamic louvers, LED temperature display',
     status: 'AI Latent Synthesis: 99.7%',
     colorTheme: '#2dd4bf', // Teal
@@ -361,7 +361,7 @@ const APPLIANCE_MODELS: ApplianceModel[] = [
     id: 'espresso_machine',
     name: 'Smart Barista Dual-Boiler Espresso Machine',
     category: 'Beverage Precision',
-    modelEngine: 'nano-banana-2 • Kie.ai 8K',
+    modelEngine: 'nano-banana-2 • OpenRouter 8K',
     promptSnippet: 'Cast-aluminum dual-boiler espresso machine, circular pressure gauges, portafilter, steam wand, cup rail',
     status: 'AI Latent Synthesis: 99.1%',
     colorTheme: '#f59e0b', // Amber/Gold
@@ -461,7 +461,7 @@ const APPLIANCE_MODELS: ApplianceModel[] = [
     id: 'robot_vacuum',
     name: 'LiDAR Smart Autonomous Robot Vacuum',
     category: 'Automated Cleaning',
-    modelEngine: 'sedance-2.5-pro • Kie.ai 8K',
+    modelEngine: 'sedance-2.5-pro • OpenRouter 8K',
     promptSnippet: 'Aerospace matte carbon robot vacuum, circular LiDAR laser turret, brushed gold rim bumper, camera window',
     status: 'AI Latent Synthesis: 99.5%',
     colorTheme: '#c084fc', // Purple/Violet
@@ -539,7 +539,7 @@ const APPLIANCE_MODELS: ApplianceModel[] = [
     id: 'smart_oven',
     name: 'Smart Built-In Convection Wall Oven',
     category: 'Culinary Hardware',
-    modelEngine: 'nano-banana-2 • Kie.ai 8K',
+    modelEngine: 'nano-banana-2 • OpenRouter 8K',
     promptSnippet: 'Built-in seamless glass convection oven, transparent OLED door, interior glowing baking rack, touch display',
     status: 'AI Latent Synthesis: 99.8%',
     colorTheme: '#3b82f6', // Electric Blue
