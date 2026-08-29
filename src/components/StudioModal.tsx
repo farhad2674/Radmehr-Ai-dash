@@ -251,6 +251,25 @@ export const StudioModal: React.FC<StudioModalProps> = ({
     }
   }, [template]);
 
+  // Treat the studio as a real mobile workspace: keep the page behind it fixed and
+  // support the familiar Escape shortcut on larger devices.
+  useEffect(() => {
+    if (!isOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        cancelPolling();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, cancelPolling, onClose]);
+
   if (!isOpen || !template) return null;
 
   const constructFinalPrompt = (): string => {
@@ -349,25 +368,25 @@ export const StudioModal: React.FC<StudioModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-soft-lg border border-[#DADCE0] w-full max-w-3xl overflow-hidden my-6 transition-all duration-200">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/60 backdrop-blur-sm animate-fade-in overflow-hidden">
+      <div role="dialog" aria-modal="true" aria-labelledby="studio-modal-title" className="bg-white rounded-t-[1.75rem] sm:rounded-2xl shadow-soft-lg border border-[#DADCE0] w-full max-w-3xl overflow-hidden sm:my-6 transition-all duration-200 h-[100dvh] sm:h-auto sm:max-h-[calc(100dvh-3rem)] flex flex-col">
 
         {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-[#E0E2EC] flex items-center justify-between bg-[#F8F9FD]">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-50 text-[#1A73E8] flex items-center justify-center border border-blue-100">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-[#E0E2EC] flex items-center justify-between bg-[#F8F9FD] shrink-0 pt-[max(.75rem,env(safe-area-inset-top))]">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-blue-50 text-[#1A73E8] flex items-center justify-center border border-blue-100 shrink-0">
               <Sparkles className="w-5 h-5" />
             </div>
-            <div>
-              <h3 className="text-base font-semibold text-[#191c23] flex items-center gap-2">
-                Generate Visual ({selectedModel})
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-100/80 text-[#1A73E8] font-medium">
+            <div className="min-w-0">
+              <h3 id="studio-modal-title" className="text-sm sm:text-base font-semibold text-[#191c23] flex items-center gap-2 truncate">
+                <span className="truncate">Generate asset</span>
+                <span className="hidden sm:inline text-xs px-2.5 py-0.5 rounded-full bg-blue-100/80 text-[#1A73E8] font-medium">
                   {template.category}
                 </span>
               </h3>
-              <div className="flex items-center gap-2 mt-0.5">
-                <p className="text-xs text-[#5F6368]">{template.name}</p>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-50 text-[#1A73E8] border border-blue-200/50">
+              <div className="flex items-center gap-2 mt-0.5 min-w-0">
+                <p className="text-xs text-[#5F6368] truncate">{template.name}</p>
+                <span className="hidden sm:inline text-[10px] font-mono px-2 py-0.5 rounded bg-blue-50 text-[#1A73E8] border border-blue-200/50">
                   {variableMode === 'object_only' ? 'Mode: 1. Object Swappable' :
                    variableMode === 'title_only' ? 'Mode: 2. Title Only' :
                    variableMode === 'both_object_and_title' ? 'Mode: 3. Both Object & Title' :
@@ -408,7 +427,7 @@ export const StudioModal: React.FC<StudioModalProps> = ({
                 cancelPolling();
                 onClose();
               }}
-              className="p-1.5 rounded-full text-[#727785] hover:bg-[#E0E2EC] transition-colors cursor-pointer"
+              className="p-2.5 -mr-1 rounded-full text-[#414754] hover:bg-[#E0E2EC] transition-colors cursor-pointer shrink-0"
               aria-label="Close modal"
             >
               <X className="w-5 h-5" />
@@ -417,7 +436,19 @@ export const StudioModal: React.FC<StudioModalProps> = ({
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+        <div className="studio-modal-scroll flex-1 min-h-0 p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto overscroll-contain pb-28 sm:pb-6">
+
+          {!hasGenerationStarted && (
+            <div className="sm:hidden flex items-center justify-between gap-3 rounded-2xl bg-blue-50 border border-blue-100 px-3.5 py-2.5">
+              <div className="min-w-0">
+                <p className="text-[10px] uppercase tracking-wider font-bold text-[#1A73E8]">Ready to customize</p>
+                <p className="text-xs text-[#414754] truncate mt-0.5">Choose an object, title and format below.</p>
+              </div>
+              <span className="shrink-0 text-[11px] font-mono font-bold text-[#1A73E8] bg-white rounded-full px-2.5 py-1 border border-blue-100">
+                {userAllowUnlimited ? 'Unlimited' : `${remainingGenerations} left`}
+              </span>
+            </div>
+          )}
 
           {/* Quota Exhaustion Alert */}
           {isLimitReached && (
@@ -485,13 +516,13 @@ export const StudioModal: React.FC<StudioModalProps> = ({
                                   type="button"
                                   onClick={() => setAspectRatio(ratio)}
                                   disabled={loading || isLimitReached}
-                                  className={`py-2 px-3 rounded-xl text-xs font-medium border transition-all cursor-pointer ${
+                                  className={`min-h-11 py-2 px-1.5 sm:px-3 rounded-xl text-xs font-medium border transition-all cursor-pointer ${
                                     aspectRatio === ratio
                                       ? 'bg-[#E8F0FE] border-[#1A73E8] text-[#1A73E8]'
                                       : 'bg-[#F1F4F9] border-[#DADCE0] text-[#5F6368] hover:bg-white'
                                   } disabled:opacity-50`}
                                 >
-                                  {ratio} {ratio === '16:9' ? '(Landscape)' : ratio === '1:1' ? '(Square)' : '(Standard)'}
+                                  <span className="block">{ratio}</span><span className="hidden sm:inline"> {ratio === '16:9' ? '(Landscape)' : ratio === '1:1' ? '(Square)' : '(Standard)'}</span>
                                 </button>
                               ))}
                             </div>
@@ -499,16 +530,16 @@ export const StudioModal: React.FC<StudioModalProps> = ({
                         </div>
 
                         {/* DYNAMIC VARIABLE SECTION: APPLIANCE / REFERENCE OBJECT */}
-                        <div className={`p-4 rounded-2xl border transition-all ${
+                        <div className={`p-3.5 sm:p-4 rounded-2xl border transition-all ${
                           canChangeObject
                             ? 'bg-white border-[#1A73E8]/40 shadow-xs'
                             : 'bg-[#F8F9FD] border-[#E0E2EC]'
                         }`}>
-                          <div className="flex items-center justify-between mb-2">
-                            <label className="text-xs font-bold text-[#191c23] flex items-center gap-2">
+                          <div className="flex items-start sm:items-center justify-between gap-2 mb-2">
+                            <label className="text-xs font-bold text-[#191c23] flex items-center gap-2 min-w-0">
                               <Box className={`w-4 h-4 ${canChangeObject ? 'text-[#1A73E8]' : 'text-gray-500'}`} />
                               Reference Appliance Object
-                              <code className="text-[11px] font-mono text-[#1A73E8] bg-blue-50 px-1.5 py-0.5 rounded">{`{{OBJECT}}`}</code>
+                              <code className="hidden sm:inline text-[11px] font-mono text-[#1A73E8] bg-blue-50 px-1.5 py-0.5 rounded">{`{{OBJECT}}`}</code>
                             </label>
                             <span className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1 ${
                               canChangeObject
@@ -516,7 +547,8 @@ export const StudioModal: React.FC<StudioModalProps> = ({
                                 : 'bg-gray-200 text-gray-700'
                             }`}>
                               {canChangeObject ? <CheckCircle2 className="w-3 h-3 text-green-600" /> : <Lock className="w-3 h-3 text-gray-500" />}
-                              {canChangeObject ? 'Editable in this Template' : '🔒 Fixed by Template (Locked)'}
+                              <span className="hidden sm:inline">{canChangeObject ? 'Editable in this Template' : 'Fixed by Template (Locked)'}</span>
+                              <span className="sm:hidden">{canChangeObject ? 'Editable' : 'Locked'}</span>
                             </span>
                           </div>
 
@@ -534,14 +566,14 @@ export const StudioModal: React.FC<StudioModalProps> = ({
                               {/* Quick Appliance Swaps */}
                               <div className="space-y-1">
                                 <span className="text-[11px] font-medium text-[#5F6368]">Quick Appliance Swaps:</span>
-                                <div className="flex items-center gap-1.5 flex-wrap">
+                                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1 snap-x">
                                   {quickApplianceSwaps.map((item) => (
                                     <button
                                       key={item.label}
                                       type="button"
                                       onClick={() => setCustomAppliance(item.value)}
                                       disabled={loading || isLimitReached}
-                                      className={`text-xs px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                                      className={`text-xs px-3 py-2 rounded-xl border transition-all cursor-pointer whitespace-nowrap snap-start min-h-10 ${
                                         customAppliance === item.value
                                           ? 'bg-[#1A73E8] text-white border-[#1A73E8] shadow-2xs font-semibold'
                                           : 'bg-white text-[#414754] border-[#DADCE0] hover:border-[#1A73E8] hover:bg-blue-50/50'
@@ -562,16 +594,16 @@ export const StudioModal: React.FC<StudioModalProps> = ({
                         </div>
 
                         {/* DYNAMIC VARIABLE SECTION: TITLE / TEXT OVERLAY */}
-                        <div className={`p-4 rounded-2xl border transition-all ${
+                        <div className={`p-3.5 sm:p-4 rounded-2xl border transition-all ${
                           canChangeTitle
                             ? 'bg-white border-purple-300 shadow-xs'
                             : 'bg-[#F8F9FD] border-[#E0E2EC]'
                         }`}>
-                          <div className="flex items-center justify-between mb-2">
-                            <label className="text-xs font-bold text-[#191c23] flex items-center gap-2">
+                          <div className="flex items-start sm:items-center justify-between gap-2 mb-2">
+                            <label className="text-xs font-bold text-[#191c23] flex items-center gap-2 min-w-0">
                               <Tag className={`w-4 h-4 ${canChangeTitle ? 'text-purple-600' : 'text-gray-500'}`} />
                               Title / Text Overlay in Image
-                              <code className="text-[11px] font-mono text-[#1A73E8] bg-blue-50 px-1.5 py-0.5 rounded">{`{{TEXT_ZONE}}`}</code>
+                              <code className="hidden sm:inline text-[11px] font-mono text-[#1A73E8] bg-blue-50 px-1.5 py-0.5 rounded">{`{{TEXT_ZONE}}`}</code>
                             </label>
                             <span className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1 ${
                               canChangeTitle
@@ -579,7 +611,8 @@ export const StudioModal: React.FC<StudioModalProps> = ({
                                 : 'bg-gray-200 text-gray-700'
                             }`}>
                               {canChangeTitle ? <CheckCircle2 className="w-3 h-3 text-purple-600" /> : <Lock className="w-3 h-3 text-gray-500" />}
-                              {canChangeTitle ? 'Editable in this Template' : '🔒 Fixed by Template (Locked)'}
+                              <span className="hidden sm:inline">{canChangeTitle ? 'Editable in this Template' : 'Fixed by Template (Locked)'}</span>
+                              <span className="sm:hidden">{canChangeTitle ? 'Editable' : 'Locked'}</span>
                             </span>
                           </div>
 
@@ -597,14 +630,14 @@ export const StudioModal: React.FC<StudioModalProps> = ({
                               {/* Quick Title Presets */}
                               <div className="space-y-1">
                                 <span className="text-[11px] font-medium text-[#5F6368]">Suggested Titles:</span>
-                                <div className="flex items-center gap-1.5 flex-wrap">
+                                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1 snap-x">
                                   {quickTitleOptions.map((title) => (
                                     <button
                                       key={title}
                                       type="button"
                                       onClick={() => setCustomTitle(title)}
                                       disabled={loading || isLimitReached}
-                                      className={`text-xs px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                                      className={`text-xs px-3 py-2 rounded-xl border transition-all cursor-pointer whitespace-nowrap snap-start min-h-10 ${
                                         customTitle === title
                                           ? 'bg-purple-700 text-white border-purple-700 shadow-2xs font-semibold'
                                           : 'bg-white text-[#414754] border-[#DADCE0] hover:border-purple-600 hover:bg-purple-50/50'
@@ -685,7 +718,7 @@ export const StudioModal: React.FC<StudioModalProps> = ({
                             id="studio-modal-generate-btn"
                             onClick={handleGenerate}
                             disabled={loading || isLimitReached}
-                            className={`w-full font-medium py-3 px-4 rounded-full transition-all flex items-center justify-center gap-2 shadow-sm text-sm cursor-pointer ${
+                            className={`hidden sm:flex w-full font-medium py-3 px-4 rounded-full transition-all items-center justify-center gap-2 shadow-sm text-sm cursor-pointer ${
                               isLimitReached
                                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                 : 'bg-[#1A73E8] hover:bg-[#1557B0] active:scale-[0.99] text-white disabled:opacity-50'
@@ -878,7 +911,7 @@ export const StudioModal: React.FC<StudioModalProps> = ({
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center gap-3 pt-1">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 pt-1">
                 <button
                   onClick={handleDownload}
                   className="flex-1 bg-[#191c23] hover:bg-[#2d3038] text-white py-2.5 px-4 rounded-xl text-xs font-medium flex items-center justify-center gap-2 transition-colors cursor-pointer"
@@ -904,13 +937,26 @@ export const StudioModal: React.FC<StudioModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-3 bg-[#F8F9FD] border-t border-[#E0E2EC] flex items-center justify-between text-xs text-[#727785]">
+        <div className="hidden sm:flex px-6 py-3 bg-[#F8F9FD] border-t border-[#E0E2EC] items-center justify-between text-xs text-[#727785] shrink-0">
           <div className="flex items-center gap-1.5">
             <ShieldCheck className="w-4 h-4 text-blue-600" />
             <span>OpenRouter Protocol & Google GenAI Certified Engine</span>
           </div>
           <span>Quota: {userCompletedGenerations} / {userGenerationLimit} Images</span>
         </div>
+
+        {!hasGenerationStarted && (
+          <div className="sm:hidden absolute bottom-0 inset-x-0 z-10 bg-white/95 backdrop-blur-xl border-t border-[#E0E2EC] px-4 pt-3 pb-[max(.75rem,env(safe-area-inset-bottom))] shadow-[0_-10px_30px_rgba(25,28,35,0.10)]">
+            <button
+              onClick={handleGenerate}
+              disabled={loading || isLimitReached}
+              className={`w-full min-h-12 font-semibold px-4 rounded-2xl transition-all flex items-center justify-center gap-2 text-sm ${isLimitReached ? 'bg-gray-200 text-gray-500' : 'bg-[#1A73E8] active:scale-[0.98] text-white shadow-lg shadow-blue-200'} disabled:opacity-60`}
+            >
+              {isLimitReached ? <Lock className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
+              <span>{isLimitReached ? 'Generation limit reached' : `Create visual · ${remainingGenerations} remaining`}</span>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
