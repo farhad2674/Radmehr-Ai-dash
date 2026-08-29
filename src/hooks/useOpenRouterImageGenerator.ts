@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { GenerateParams, UseKieImageGeneratorResult } from '../types';
+import { GenerateParams, UseOpenRouterImageGeneratorResult } from '../types';
 
 const MAX_GENERATION_WAIT_MS = 4 * 60 * 1000;
 const INITIAL_POLL_DELAY_MS = 1500;
@@ -19,7 +19,7 @@ function getRemainingWaitMs(startedAt: number): number {
   return Math.max(MAX_GENERATION_WAIT_MS - (Date.now() - startedAt), 0);
 }
 
-export function useKieImageGenerator(): UseKieImageGeneratorResult {
+export function useOpenRouterImageGenerator(): UseOpenRouterImageGeneratorResult {
   const [loading, setLoading] = useState<boolean>(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +65,7 @@ export function useKieImageGenerator(): UseKieImageGeneratorResult {
 
       try {
         // Step 1: Request task creation
-        const initRes = await fetchWithTimeout('/api/kie/generate', {
+        const initRes = await fetchWithTimeout('/api/openrouter/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(params),
@@ -91,7 +91,7 @@ export function useKieImageGenerator(): UseKieImageGeneratorResult {
                 throw new Error('Image generation timed out after 4 minutes. Please try again.');
               }
 
-              const statusRes = await fetchWithTimeout(`/api/kie/status?taskId=${currentTaskId}`, {}, remainingWaitMs);
+              const statusRes = await fetchWithTimeout(`/api/openrouter/status?taskId=${currentTaskId}`, {}, remainingWaitMs);
               const statusData = await statusRes.json();
 
               if (!statusRes.ok) {

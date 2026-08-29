@@ -71,7 +71,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </span>
           <span className="hidden md:inline-block w-1.5 h-1.5 rounded-full bg-[#DADCE0]" />
           <span className="hidden md:inline-block text-xs font-mono text-[#5F6368]">
-            v2.4.1 (Kie.ai + Gemini 3.7)
+            v2.4.1 (OpenRouter + Gemini 3.7)
           </span>
         </div>
       </div>
@@ -116,7 +116,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Notifications Icon */}
         <button
-          onClick={() => alert('RadmehrAI Studio Notifications:\n- Real-time Kie.ai polling engine active\n- Quota limit policy enforced (50 images/user)\n- 0 security policy breaches in last 24h')}
+          onClick={() => alert('RadmehrAI Studio Notifications:\n- Real-time OpenRouter polling engine active\n- Quota limit policy enforced (50 images/user)\n- 0 security policy breaches in last 24h')}
           className="p-2 rounded-xl text-[#727785] hover:text-[#191c23] hover:bg-[#F1F4F9] transition-colors relative cursor-pointer"
           aria-label="Notifications"
         >

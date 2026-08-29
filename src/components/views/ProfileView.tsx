@@ -164,7 +164,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   <Zap className="w-4 h-4" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-semibold text-[#191c23]">Kie.ai Async Protocol</h4>
+                  <h4 className="text-xs font-semibold text-[#191c23]">OpenRouter Async Protocol</h4>
                   <p className="text-[11px] text-[#5F6368]">5-Second Active Polling & Error Recovery</p>
                 </div>
               </div>

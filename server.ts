@@ -52,7 +52,7 @@ if (!fs.existsSync(uploadsDir)) {
 app.use('/uploads', express.static(uploadsDir));
 
 
-const KIE_TASK_RESPONSE_TIMEOUT_MS = Number(process.env.KIE_TASK_RESPONSE_TIMEOUT_MS || 4 * 60 * 1000);
+const OPENROUTER_RESPONSE_TIMEOUT_MS = Number(process.env.OPENROUTER_RESPONSE_TIMEOUT_MS || 4 * 60 * 1000);
 
 async function fetchJsonWithTimeout(url: string, init: RequestInit = {}, timeoutMs = 30000): Promise<{ response: globalThis.Response; data: any; rawText: string }> {
   const controller = new AbortController();
@@ -70,42 +70,6 @@ async function fetchJsonWithTimeout(url: string, init: RequestInit = {}, timeout
   } finally {
     clearTimeout(timeout);
   }
-}
-
-function buildKieCreateTaskPayload(params: {
-  prompt: string;
-  model?: string;
-  referenceImageUrl?: string;
-  aspectRatio?: string;
-  resolution?: string;
-}): any {
-  const model = params.model || 'nano-banana-2';
-  const aspectRatio = params.aspectRatio || '1:1';
-
-  if (model === 'seedream/5-pro-image-to-image') {
-    return {
-      model,
-      input: {
-        prompt: params.prompt,
-        image_urls: params.referenceImageUrl ? [params.referenceImageUrl] : [],
-        aspect_ratio: aspectRatio === 'auto' ? '1:1' : aspectRatio,
-        quality: params.resolution === '2K' || params.resolution === '4K' ? 'high' : 'basic',
-        output_format: 'png',
-        nsfw_checker: true,
-      },
-    };
-  }
-
-  return {
-    model,
-    input: {
-      prompt: params.prompt,
-      image_input: params.referenceImageUrl ? [params.referenceImageUrl] : [],
-      aspect_ratio: aspectRatio === 'auto' ? 'auto' : aspectRatio,
-      resolution: params.resolution || '1K',
-      output_format: 'png',
-    },
-  };
 }
 
 // Initialize Google GenAI client
@@ -128,7 +92,7 @@ function getAI(): GoogleGenAI | null {
   return aiClient;
 }
 
-// In-Memory Task Registry for Kie.ai & Local Generation Jobs
+// In-memory task registry for OpenRouter and local generation jobs.
 interface GenerationJob {
   taskId: string;
   prompt: string;
@@ -430,335 +394,140 @@ app.post('/api/storage/backup/import', (req: Request, res: Response) => {
 });
 
 // -------------------------------------------------------------
-// API ROUTE A: Job Submission Route (Kie.ai & Self-Hosted Engine)
+// OpenRouter image generation routes
 // -------------------------------------------------------------
-app.post('/api/kie/generate', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { prompt, model, referenceImageUrl, aspectRatio, resolution } = req.body;
-
-    if (!prompt) {
-      res.status(400).json({ error: 'Prompt is required' });
-      return;
+function extractOpenRouterImage(data: any): string | null {
+  const message = data?.choices?.[0]?.message;
+  const images = message?.images;
+  if (Array.isArray(images)) {
+    for (const image of images) {
+      const url = image?.image_url?.url || image?.imageUrl?.url || image?.url;
+      if (typeof url === 'string' && url) return url;
     }
-
-    const kieApiKey = process.env.KIE_AI_API_KEY;
-
-    // If real Kie.ai API key is supplied, attempt live forward with exact Kie.ai createTask specification
-    if (kieApiKey && kieApiKey.trim() !== '' && kieApiKey !== 'your_kie_ai_api_key_here') {
-      try {
-        const payload: any = buildKieCreateTaskPayload({ prompt, model, referenceImageUrl, aspectRatio, resolution });
-
-        if (process.env.APP_URL) {
-          payload.callBackUrl = `${process.env.APP_URL.replace(/\/$/, '')}/api/kie/callback`;
-        }
-
-        console.log('[Kie.ai] Submitting task to https://api.kie.ai/api/v1/jobs/createTask with model:', payload.model);
-
-        const { response: kieRes, data } = await fetchJsonWithTimeout('https://api.kie.ai/api/v1/jobs/createTask', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${kieApiKey.trim()}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
-        }, KIE_TASK_RESPONSE_TIMEOUT_MS);
-
-        console.log('[Kie.ai] createTask response:', JSON.stringify(data));
-
-        const remoteTaskId = data.taskId || data.data?.taskId || (typeof data.data === 'string' ? data.data : null);
-
-        if (kieRes.ok && remoteTaskId) {
-          activeJobs.set(remoteTaskId, {
-            taskId: remoteTaskId,
-            prompt,
-            model: model || 'nano-banana-2',
-            aspectRatio: aspectRatio || '16:9',
-            referenceImageUrl,
-            status: 'PROCESSING',
-            createdAt: Date.now(),
-          });
-          res.json({ taskId: remoteTaskId });
-          return;
-        } else {
-          const apiError = data.msg || data.message || data.error || `Kie.ai createTask failed with HTTP ${kieRes.status}`;
-          console.warn('[Kie.ai] createTask failed:', apiError);
-          res.status(kieRes.ok ? 502 : kieRes.status).json({ error: apiError, details: data });
-          return;
-        }
-      } catch (kieErr: any) {
-        const isAbort = kieErr?.name === 'AbortError';
-        const message = isAbort
-          ? `Kie.ai createTask timed out after ${Math.round(KIE_TASK_RESPONSE_TIMEOUT_MS / 1000)} seconds.`
-          : (kieErr?.message || 'Failed to contact Kie.ai createTask endpoint.');
-        console.warn('[Kie.ai] createTask request failed:', message);
-        res.status(504).json({ error: message });
-        return;
-      }
-    }
-
-    // Server-managed asynchronous task execution (fallback or local engine)
-    const taskId = `job_kie_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-    const newJob: GenerationJob = {
-      taskId,
-      prompt,
-      model: model || 'nano-banana-2',
-      aspectRatio: aspectRatio || '16:9',
-      referenceImageUrl,
-      status: 'PENDING',
-      createdAt: Date.now(),
-    };
-
-    activeJobs.set(taskId, newJob);
-
-    // Fire asynchronous background generator
-    processGenerationTask(taskId, prompt, model || 'nano-banana-2', aspectRatio || '16:9', referenceImageUrl);
-
-    res.json({ taskId });
-  } catch (error: any) {
-    console.error('Generate API error:', error);
-    res.status(500).json({ error: error?.message || 'Internal server error' });
   }
-});
 
-// -------------------------------------------------------------
-// API ROUTE: Kie.ai Webhook Callback
-// -------------------------------------------------------------
-app.post('/api/kie/callback', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const payload = req.body;
-    console.log('[Kie.ai Webhook] Received callback:', JSON.stringify(payload));
-    
-    if (payload && payload.data && payload.data.taskId) {
-      const taskId = payload.data.taskId;
-      const stateStr = (payload.data.state || '').toString().toLowerCase();
-      
-      const job = activeJobs.get(taskId);
-      if (!job) {
-        console.log(`[Kie.ai Webhook] Job ${taskId} not found in memory`);
-        res.status(200).json({ received: true });
-        return;
-      }
-
-      if (stateStr === 'success' || stateStr === 'completed') {
-        let foundImageUrl: string | null = null;
-        if (payload.data.resultJson) {
-           try {
-             const parsedResult = typeof payload.data.resultJson === 'string' ? JSON.parse(payload.data.resultJson) : payload.data.resultJson;
-             if (parsedResult.resultUrls && Array.isArray(parsedResult.resultUrls) && parsedResult.resultUrls.length > 0) {
-               foundImageUrl = parsedResult.resultUrls[0];
-             }
-           } catch (e) {
-             console.warn('[Kie.ai Webhook] Failed parsing resultJson');
-           }
-        }
-        
-        if (foundImageUrl) {
-           cacheRemoteImageToDisk(foundImageUrl, 'kie_market').then(diskUrl => {
-             job.imageUrl = diskUrl;
-             job.status = 'COMPLETED';
-             job.completedAt = Date.now();
-           });
-        } else {
-           job.status = 'FAILED';
-           job.error = 'No image URL found in callback';
-        }
-      } else if (stateStr === 'fail' || stateStr === 'failed' || stateStr === 'error') {
-         job.status = 'FAILED';
-         job.error = payload.msg || 'Task failed according to callback';
-      }
+  const content = message?.content;
+  if (Array.isArray(content)) {
+    for (const part of content) {
+      const url = part?.image_url?.url || part?.imageUrl?.url;
+      if (typeof url === 'string' && url) return url;
     }
-    res.status(200).json({ received: true });
-  } catch (err: any) {
-    console.error('[Kie.ai Webhook] Error processing callback:', err);
-    res.status(500).json({ error: 'Internal server error' });
   }
-});
-
-// -------------------------------------------------------------
-// Helper: Cache remote image to local server disk (/uploads/*.png)
-// -------------------------------------------------------------
-async function cacheRemoteImageToDisk(remoteUrl: string, prefix = 'kie'): Promise<string> {
-  try {
-    const res = await fetch(remoteUrl);
-    if (res.ok) {
-      const arrayBuffer = await res.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      const filename = `${prefix}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.png`;
-      const filePath = path.join(process.cwd(), 'uploads', filename);
-      fs.writeFileSync(filePath, buffer);
-      console.log(`[Storage] Saved Kie.ai generated image to local server disk: /uploads/${filename}`);
-      return `/uploads/${filename}`;
-    }
-  } catch (e: any) {
-    console.warn('[Storage] Failed caching remote image to disk, falling back to direct URL:', e?.message || e);
-  }
-  return remoteUrl;
+  return null;
 }
 
-// -------------------------------------------------------------
-// API ROUTE B: Status Check Route (Polling Kie.ai or Local Jobs)
-// -------------------------------------------------------------
-app.get('/api/kie/status', async (req: Request, res: Response): Promise<void> => {
-  const taskId = req.query.taskId as string;
+async function persistOpenRouterImage(imageUrl: string): Promise<string> {
+  if (imageUrl.startsWith('data:')) {
+    const match = imageUrl.match(/^data:([^;]+);base64,(.+)$/s);
+    if (!match) throw new Error('OpenRouter returned an invalid image data URL.');
+    return saveImageBase64ToDisk(match[2], match[1]);
+  }
+  return cacheRemoteImageToDisk(imageUrl, 'openrouter');
+}
 
+async function processOpenRouterTask(job: GenerationJob, resolution?: string): Promise<void> {
+  const apiKey = process.env.OPENROUTER_API_KEY?.trim();
+  if (!apiKey) {
+    processGenerationTask(job.taskId, job.prompt, job.model, job.aspectRatio, job.referenceImageUrl);
+    return;
+  }
+
+  job.status = 'PROCESSING';
+  try {
+    const configuredModel = process.env.OPENROUTER_IMAGE_MODEL || 'google/gemini-2.5-flash-image-preview';
+    const content: any[] = [{
+      type: 'text',
+      text: `${job.prompt}\n\nCreate one polished image. Aspect ratio: ${job.aspectRatio}; requested resolution: ${resolution || '1K'}.`,
+    }];
+    if (job.referenceImageUrl) {
+      content.push({ type: 'image_url', image_url: { url: job.referenceImageUrl } });
+    }
+
+    const { response, data } = await fetchJsonWithTimeout('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        ...(process.env.APP_URL ? { 'HTTP-Referer': process.env.APP_URL } : {}),
+        ...(process.env.OPENROUTER_APP_NAME ? { 'X-Title': process.env.OPENROUTER_APP_NAME } : {}),
+      },
+      body: JSON.stringify({
+        model: configuredModel,
+        messages: [{ role: 'user', content }],
+        modalities: ['image', 'text'],
+      }),
+    }, OPENROUTER_RESPONSE_TIMEOUT_MS);
+
+    if (!response.ok) {
+      throw new Error(data?.error?.message || data?.message || `OpenRouter request failed with HTTP ${response.status}.`);
+    }
+    const imageUrl = extractOpenRouterImage(data);
+    if (!imageUrl) throw new Error('OpenRouter completed the request without returning an image.');
+
+    job.imageUrl = await persistOpenRouterImage(imageUrl);
+    job.status = 'COMPLETED';
+    job.completedAt = Date.now();
+  } catch (error: any) {
+    job.status = 'FAILED';
+    job.error = error?.name === 'AbortError'
+      ? `OpenRouter generation timed out after ${Math.round(OPENROUTER_RESPONSE_TIMEOUT_MS / 1000)} seconds.`
+      : (error?.message || 'OpenRouter image generation failed.');
+    console.warn(`[OpenRouter] Job ${job.taskId} failed:`, job.error);
+  }
+}
+
+app.post('/api/openrouter/generate', async (req: Request, res: Response): Promise<void> => {
+  const { prompt, model, referenceImageUrl, aspectRatio, resolution } = req.body;
+  if (!prompt || typeof prompt !== 'string') {
+    res.status(400).json({ error: 'Prompt is required' });
+    return;
+  }
+
+  const taskId = `job_openrouter_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+  const job: GenerationJob = {
+    taskId,
+    prompt,
+    model: model || 'default',
+    aspectRatio: aspectRatio || '16:9',
+    referenceImageUrl,
+    status: 'PENDING',
+    createdAt: Date.now(),
+  };
+  activeJobs.set(taskId, job);
+  void processOpenRouterTask(job, resolution);
+  res.json({ taskId });
+});
+
+app.get('/api/openrouter/status', (req: Request, res: Response): void => {
+  const taskId = req.query.taskId as string;
   if (!taskId) {
     res.status(400).json({ error: 'taskId is required' });
     return;
   }
-
-  const kieApiKey = process.env.KIE_AI_API_KEY;
-
-  // 1. Check local job state first (it might have been updated by the webhook callback)
   const job = activeJobs.get(taskId);
-  if (job && (job.status === 'COMPLETED' || job.status === 'FAILED')) {
-    res.json({
-      status: job.status,
-      imageUrl: job.imageUrl,
-      error: job.error || null,
-    });
+  if (!job) {
+    res.status(404).json({ status: 'FAILED', error: 'Generation task not found.' });
     return;
   }
-
-  // 2. Check remote Kie.ai API if taskId is from remote Kie.ai and not yet completed
-  if (kieApiKey && kieApiKey.trim() !== '' && !taskId.startsWith('job_kie_')) {
-    try {
-      // Primary OpenAPI unified query endpoint for Market models: /api/v1/jobs/recordInfo?taskId=...
-      const recordInfoUrl = `https://api.kie.ai/api/v1/jobs/recordInfo?taskId=${encodeURIComponent(taskId)}`;
-      console.log(`[Kie.ai] Polling recordInfo: ${recordInfoUrl}`);
-
-      const { response, data } = await fetchJsonWithTimeout(recordInfoUrl, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${kieApiKey.trim()}`,
-          'Content-Type': 'application/json',
-        },
-      }, KIE_TASK_RESPONSE_TIMEOUT_MS);
-
-      if (!response.ok) {
-        const apiError = data.msg || data.message || data.error || `Kie.ai recordInfo failed with HTTP ${response.status}`;
-        res.status(response.status).json({ status: 'FAILED', error: apiError });
-        return;
-      }
-
-      console.log(`[Kie.ai] recordInfo status response for ${taskId}:`, JSON.stringify(data));
-
-      if (data && (data.data || data.code !== undefined)) {
-        const taskData = data.data || data;
-        const stateStr = (taskData.state || taskData.status || '').toString().toLowerCase();
-
-        // 1. Success state: extract image from resultJson
-        if (stateStr === 'success' || stateStr === 'completed') {
-          let foundImageUrl: string | null = null;
-
-          // A) Parse resultJson (stringified JSON object containing resultUrls: [])
-          if (taskData.resultJson) {
-            try {
-              const parsedResult = typeof taskData.resultJson === 'string' ? JSON.parse(taskData.resultJson) : taskData.resultJson;
-              if (parsedResult.resultUrls && Array.isArray(parsedResult.resultUrls) && parsedResult.resultUrls.length > 0) {
-                foundImageUrl = parsedResult.resultUrls[0];
-              } else if (parsedResult.resultObject) {
-                foundImageUrl = parsedResult.resultObject.url || parsedResult.resultObject.imageUrl || parsedResult.resultObject.mask_urls?.[0] || null;
-              }
-            } catch (err: any) {
-              console.warn('[Kie.ai] Failed parsing resultJson string:', err?.message || err);
-            }
-          }
-
-          // B) Fallback to top-level URL fields if resultJson was not present
-          if (!foundImageUrl) {
-            foundImageUrl = 
-              taskData.resultUrl || 
-              taskData.imageUrl || 
-              taskData.output_url ||
-              (Array.isArray(taskData.outputs) ? taskData.outputs[0] : null) ||
-              (Array.isArray(taskData.output) ? taskData.output[0] : null) ||
-              taskData.output?.image_url ||
-              taskData.output?.imageUrl ||
-              taskData.result?.imageUrl ||
-              taskData.result?.url ||
-              null;
-          }
-
-          if (foundImageUrl) {
-            // Cache remote image directly to local server disk to prevent 24h expiration & CORS issues
-            const permanentDiskUrl = await cacheRemoteImageToDisk(foundImageUrl, 'kie_market');
-
-            if (job) {
-              job.status = 'COMPLETED';
-              job.imageUrl = permanentDiskUrl;
-              job.completedAt = Date.now();
-            }
-
-            res.json({
-              status: 'COMPLETED',
-              imageUrl: permanentDiskUrl,
-              remoteUrl: foundImageUrl,
-              progress: 100,
-              costTime: taskData.costTime || 0,
-              creditsConsumed: taskData.creditsConsumed || 0,
-              error: null,
-            });
-            return;
-          } else {
-            console.warn('[Kie.ai] Success state received but no image URL could be parsed, using fallback.');
-            res.json({
-              status: 'COMPLETED',
-              imageUrl: FALLBACK_APPLIANCE_IMAGES[0],
-              error: null,
-            });
-            return;
-          }
-        } 
-        
-        // 2. Fail state: extract failMsg or failCode
-        else if (stateStr === 'fail' || stateStr === 'failed' || stateStr === 'error') {
-          const errMsg = taskData.failMsg || taskData.failCode || data.msg || 'Kie.ai task failed during generation.';
-          if (job) {
-            job.status = 'FAILED';
-            job.error = errMsg;
-          }
-
-          res.json({
-            status: 'FAILED',
-            error: errMsg,
-          });
-          return;
-        } 
-        
-        // 3. In-Progress states: 'waiting', 'queuing', 'generating'
-        else {
-          res.json({
-            status: 'PROCESSING',
-            progress: taskData.progress || (stateStr === 'generating' ? 65 : stateStr === 'queuing' ? 30 : 10),
-            state: stateStr,
-            imageUrl: null,
-            error: null,
-          });
-          return;
-        }
-      }
-    } catch (err: any) {
-      console.warn('Failed to query Kie.ai recordInfo status, falling back to local task check:', err?.message || err);
-    }
-  }
-
-  // Local task fallback check
-  const fallbackJob = activeJobs.get(taskId);
-  if (fallbackJob) {
-    res.json({
-      status: fallbackJob.status,
-      imageUrl: fallbackJob.imageUrl,
-      error: fallbackJob.error || null,
-    });
-    return;
-  }
-
-  res.json({
-    status: 'COMPLETED',
-    imageUrl: FALLBACK_APPLIANCE_IMAGES[0],
-    error: null,
-  });
+  res.json({ status: job.status, imageUrl: job.imageUrl, error: job.error || null });
 });
+
+// Cache a remote provider image on local server disk.
+async function cacheRemoteImageToDisk(remoteUrl: string, prefix = 'openrouter'): Promise<string> {
+  try {
+    const response = await fetch(remoteUrl);
+    if (response.ok) {
+      const mimeType = response.headers.get('content-type') || 'image/png';
+      const extension = mimeType.includes('jpeg') ? 'jpg' : mimeType.includes('webp') ? 'webp' : 'png';
+      const filename = `${prefix}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${extension}`;
+      fs.writeFileSync(path.join(getUploadsDir(), filename), Buffer.from(await response.arrayBuffer()));
+      return `/uploads/${filename}`;
+    }
+  } catch (error: any) {
+    console.warn('[Storage] Failed to cache OpenRouter image:', error?.message || error);
+  }
+  return remoteUrl;
+}
 
 // -------------------------------------------------------------
 // API ROUTE C: Gemini Prompt Auto-Optimizer
@@ -805,7 +574,7 @@ app.get('/api/health', (req: Request, res: Response) => {
     version: '2.5.0-parspack-selfhosted',
     storageMode: 'Node.js Local Disk & Static Uploads',
     hasGeminiKey: Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'MY_GEMINI_API_KEY'),
-    hasKieKey: Boolean(process.env.KIE_AI_API_KEY),
+    hasOpenRouterKey: Boolean(process.env.OPENROUTER_API_KEY),
   });
 });
 

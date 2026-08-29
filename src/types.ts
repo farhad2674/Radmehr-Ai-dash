@@ -111,7 +111,7 @@ export interface GenerateParams {
   templateId?: string;
 }
 
-export interface UseKieImageGeneratorResult {
+export interface UseOpenRouterImageGeneratorResult {
   generateImage: (params: GenerateParams) => Promise<string | null>;
   loading: boolean;
   status: string | null;

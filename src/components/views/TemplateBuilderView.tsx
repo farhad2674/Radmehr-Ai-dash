@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useKieImageGenerator } from '../../hooks/useKieImageGenerator';
+import { useOpenRouterImageGenerator } from '../../hooks/useOpenRouterImageGenerator';
 import {  Save, 
   Sparkles, 
   UploadCloud, 
@@ -35,7 +35,7 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
   onCancel,
   initialTemplate,
 }) => {
-  const kieGenerator = useKieImageGenerator();
+  const openRouterGenerator = useOpenRouterImageGenerator();
   const [name, setName] = useState<string>(initialTemplate?.name || '');
   const [category, setCategory] = useState<string>(initialTemplate?.category || 'Smart Kitchen');
   const [model, setModel] = useState<ExecutionModel>(initialTemplate?.model || 'nano-banana-2');
@@ -243,7 +243,7 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
     resolvedPrompt = resolvedPrompt.replace(/{{input}}/g, titleOverlay);
     resolvedPrompt = resolvedPrompt.replace(/{{VARIABLE_NAME}}/g, titleOverlay);
 
-    const resultUrl = await kieGenerator.generateImage({
+    const resultUrl = await openRouterGenerator.generateImage({
       prompt: resolvedPrompt,
       model,
       aspectRatio: '16:9',
