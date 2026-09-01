@@ -50,11 +50,12 @@ guardian_review(){
   prompt="$(cat "$POLICY"; printf '\n\n'; cat "$GUARDIAN"; printf '\n\n'; cat "$PHASES"; printf '\n\n'; [[ -n "$phase_file" && -f "$phase_file" ]] && cat "$phase_file" || true; printf '\n\nPerform an independent READ-ONLY review of the current working tree. Inspect git status and git diff yourself. Do not edit, stage, commit, push, install packages, access production systems, or request sandbox escalation.\n')"
   note "══ Guardian ══"
   set +e
-  codex exec --ask-for-approval never --sandbox read-only "$prompt" 2>&1 | tee "$log"
+  codex exec --sandbox read-only "$prompt" 2>&1 | tee "$log"
   rc=${PIPESTATUS[0]}
   set -e
   [[ $rc -eq 0 ]] || die "Guardian could not complete safely; failing closed"
-  grep -q 'GUARDIAN_DECISION: PASS' "$log" || die "Guardian BLOCKED the change"
+  decision="$(grep '^GUARDIAN_DECISION: ' "$log" | tail -n 1 || true)"
+  [[ "$decision" == "GUARDIAN_DECISION: PASS" ]] || die "Guardian did not return final PASS; failing closed"
   ok "Guardian PASS"
 }
 
@@ -62,13 +63,15 @@ implement_phase(){
   local phase_file="$1" log prompt rc
   [[ -f "$phase_file" ]] || die "Missing phase file: $phase_file"
   log="$LOGDIR/implementer-$(date +%Y%m%d-%H%M%S).log"
-  prompt="$(cat "$POLICY"; printf '\n\n'; cat "$PHASES"; printf '\n\n'; cat "$phase_file"; printf '\n\nYou are the Implementer. Work autonomously inside the repository workspace only. Do not push, deploy, force Git operations, access production infrastructure, print secrets, or weaken safety controls. Use the smallest coherent implementation. Run relevant checks. If sandboxing blocks a required risky/network operation, do not request escalation; stop and report it.\n')"
+  prompt="$(cat "$POLICY"; printf '\n\n'; cat "$PHASES"; printf '\n\n'; cat "$phase_file"; printf '\n\nYou are the Implementer. Work autonomously inside the repository workspace only. Do not push, deploy, force Git operations, access production infrastructure, print secrets, or weaken safety controls. Use the smallest coherent implementation. Run relevant checks. If sandboxing blocks a required risky/network operation, do not request escalation; stop and report it. At the very end output exactly one line: IMPLEMENTER_DECISION: COMPLETE or IMPLEMENTER_DECISION: BLOCK.\n')"
   note "══ Implementer ══"
   set +e
-  codex exec --ask-for-approval never --sandbox workspace-write "$prompt" 2>&1 | tee "$log"
+  codex exec --sandbox workspace-write "$prompt" 2>&1 | tee "$log"
   rc=${PIPESTATUS[0]}
   set -e
-  [[ $rc -eq 0 ]] || die "Implementer stopped or sandbox blocked an operation; no escalation granted"
+  [[ $rc -eq 0 ]] || die "Implementer process failed; no escalation granted"
+  decision="$(grep '^IMPLEMENTER_DECISION: ' "$log" | tail -n 1 || true)"
+  [[ "$decision" == "IMPLEMENTER_DECISION: COMPLETE" ]] || die "Implementer did not report COMPLETE; failing closed"
 }
 
 checkpoint_commit(){
