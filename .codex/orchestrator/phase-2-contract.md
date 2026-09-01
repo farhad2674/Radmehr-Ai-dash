@@ -26,6 +26,7 @@ This contract removes ambiguity for the Phase 2 implementation. It is intentiona
 - The bootstrap password is read from the environment, hashed immediately, never logged, and the in-process password environment value should be deleted after the bootstrap attempt.
 - The bootstrap account is created as `SUPER_ADMIN`, `status=ACTIVE`, `api_access=false`, `monthly_quota=0`, and `must_change_password=true`.
 - If any user already exists, bootstrap credentials are ignored and no additional SUPER_ADMIN is created.
+- `.env.example` already documents these four bootstrap variable names with empty placeholder values. The Implementer must not edit `.env.example` during Phase 2 generation; it is reference context only.
 
 ## Passwords
 - Do not add a dependency solely for password hashing in Phase 2.
