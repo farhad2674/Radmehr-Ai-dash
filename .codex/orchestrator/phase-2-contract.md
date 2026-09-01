@@ -54,12 +54,20 @@ This contract removes ambiguity for the Phase 2 implementation. It is intentiona
 - Phase 2 must not introduce any user-role or account-status mutation path that can bypass that database invariant.
 - The existing PostgreSQL integration test covering prevention of demotion of the last active `SUPER_ADMIN` is required to pass before Phase 2 can receive Guardian PASS.
 
+## Implementer / validator responsibility split
+- The text-only Implementer is a code generator, not the acceptance validator. It is intentionally forbidden from using repository tools, shell commands, network, or the database.
+- The tracked source context supplied in the prompt is the authoritative snapshot the Implementer must use for candidate generation. The Implementer must not return `BLOCK` merely because it cannot independently re-open repository files, inspect migration state with tools, execute the database, or prove that the candidate compiles.
+- `COMPLETE` means: the Implementer has produced a coherent candidate implementation and the mandatory candidate test files for the supplied authoritative context. It does NOT mean the candidate has already passed compilation, runtime tests, DB tests, or Guardian review.
+- After `COMPLETE`, the trusted wrapper is responsible for applying the candidate only inside the detached disposable worktree, compiling it, running the full deterministic suite, running the safe `TEST_DATABASE_URL` DB suites, generating the canonical Git patch, and sending that validated patch to Guardian.
+- The Implementer should return `BLOCK` only for a concrete semantic impossibility visible in the supplied context, such as a required schema field/table being absent or mutually incompatible requirements. Lack of tool access by itself is never a valid BLOCK reason in this architecture.
+- Generated DB-backed test code may reference `process.env.TEST_DATABASE_URL`; the Implementer does not need to connect to that database itself. The trusted validator will provide and execute against the safe test database later.
+
 ## Mandatory Phase 2 validation
 - `TEST_DATABASE_URL` is mandatory for a Phase 2 acceptance run. If the safe local/test database gate cannot validate it, the run is incomplete and must not proceed to Guardian PASS.
 - The existing PostgreSQL DB suite must pass, including user defaults, identity uniqueness, last-active-SUPER_ADMIN protection, and immutable audit behavior.
 - A Phase 2 implementation is not COMPLETE if it only adds pure/unit tests for password hashing, token helpers, or session-expiry calculations. At least one generated `.test.ts` file must be a DB-backed authentication integration suite that uses `TEST_DATABASE_URL` and exercises the real PostgreSQL `users`, `sessions`, and `account_tokens` tables through the Phase 2 auth service/handlers.
 - When `TEST_DATABASE_URL` is present, the generated DB-backed auth integration tests must execute rather than skip. They must clean up only their own disposable test records or use the existing disposable DB-test isolation strategy; they must never fall back to `DATABASE_URL`.
-- The Implementer must return `BLOCK`, not `COMPLETE`, if it cannot provide DB-backed coverage for the mandatory flows within Phase 2 scope.
+- The Implementer must return `BLOCK`, not `COMPLETE`, if the supplied schema/context makes DB-backed coverage of the mandatory flows impossible within Phase 2 scope. It must not return BLOCK merely because it cannot execute those tests itself.
 - Add focused authentication tests beyond password hashing. At minimum validate:
   - successful login creates a server-side session while persisting only the session-token hash;
   - invalid user and invalid password produce the same generic login failure;
