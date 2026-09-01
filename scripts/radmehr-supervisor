@@ -5,7 +5,7 @@ ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "Run inside the re
 cd "$ROOT"
 
 MODEL="${RADMEHR_CODEX_MODEL:-gpt-5.6-sol}"
-MAX_CONTEXT_BYTES="${RADMEHR_SUPERVISOR_CONTEXT_BYTES:-950000}"
+MAX_CONTEXT_BYTES="${RADMEHR_SUPERVISOR_CONTEXT_BYTES:-1050000}"
 MAX_CHANGE_BYTES="${RADMEHR_SUPERVISOR_CHANGE_BYTES:-700000}"
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/radmehr-supervisor.XXXXXX")"
 trap 'rm -rf "$TMP"' EXIT
@@ -14,109 +14,36 @@ say(){ printf '\n%s\n' "$*"; }
 ok(){ printf '✓ %s\n' "$*"; }
 fail(){ printf '\n✗ %s\n' "$*" >&2; exit 1; }
 
-for cmd in codex git npm node; do
-  command -v "$cmd" >/dev/null 2>&1 || fail "$cmd not found"
-done
+for cmd in codex git npm node; do command -v "$cmd" >/dev/null 2>&1 || fail "$cmd not found"; done
 [[ -f FINAL_SPEC.md ]] || fail "FINAL_SPEC.md is missing"
 [[ -f .codex/supervisor.md ]] || fail ".codex/supervisor.md is missing"
 
-assert_clean(){
-  if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
-    git status --short
-    fail "Tracked working tree must be clean before a supervisor run"
-  fi
-}
-
 write_schemas(){
   cat > "$TMP/task.schema.json" <<'JSON'
-{
-  "type":"object",
-  "properties":{
-    "decision":{"type":"string","enum":["TASK","STOP"]},
-    "milestone":{"type":"string"},
-    "task":{"type":"string"},
-    "acceptance":{"type":"array","items":{"type":"string"}},
-    "reason":{"type":"string"}
-  },
-  "required":["decision","milestone","task","acceptance","reason"],
-  "additionalProperties":false
-}
+{"type":"object","properties":{"decision":{"type":"string","enum":["TASK","STOP"]},"milestone":{"type":"string"},"task":{"type":"string"},"acceptance":{"type":"array","items":{"type":"string"}},"reason":{"type":"string"}},"required":["decision","milestone","task","acceptance","reason"],"additionalProperties":false}
 JSON
-
   cat > "$TMP/change.schema.json" <<'JSON'
-{
-  "type":"object",
-  "properties":{
-    "decision":{"type":"string","enum":["IMPLEMENT","BLOCK"]},
-    "summary":{"type":"string"},
-    "files":{"type":"array","maxItems":18,"items":{
-      "type":"object",
-      "properties":{
-        "path":{"type":"string"},
-        "operation":{"type":"string","enum":["create","replace"]},
-        "content":{"type":"string"}
-      },
-      "required":["path","operation","content"],
-      "additionalProperties":false
-    }},
-    "edits":{"type":"array","maxItems":30,"items":{
-      "type":"object",
-      "properties":{
-        "path":{"type":"string"},
-        "old_text":{"type":"string"},
-        "new_text":{"type":"string"}
-      },
-      "required":["path","old_text","new_text"],
-      "additionalProperties":false
-    }}
-  },
-  "required":["decision","summary","files","edits"],
-  "additionalProperties":false
-}
+{"type":"object","properties":{"decision":{"type":"string","enum":["IMPLEMENT","BLOCK"]},"summary":{"type":"string"},"files":{"type":"array","maxItems":18,"items":{"type":"object","properties":{"path":{"type":"string"},"operation":{"type":"string","enum":["create","replace"]},"content":{"type":"string"}},"required":["path","operation","content"],"additionalProperties":false}},"edits":{"type":"array","maxItems":30,"items":{"type":"object","properties":{"path":{"type":"string"},"old_text":{"type":"string"},"new_text":{"type":"string"}},"required":["path","old_text","new_text"],"additionalProperties":false}},"required":["decision","summary","files","edits"],"additionalProperties":false}
 JSON
-
   cat > "$TMP/review.schema.json" <<'JSON'
-{
-  "type":"object",
-  "properties":{
-    "decision":{"type":"string","enum":["PASS","FIX","STOP"]},
-    "summary":{"type":"string"},
-    "repair_task":{"type":"string"},
-    "next_milestone":{"type":"string"}
-  },
-  "required":["decision","summary","repair_task","next_milestone"],
-  "additionalProperties":false
-}
+{"type":"object","properties":{"decision":{"type":"string","enum":["PASS","FIX","STOP"]},"summary":{"type":"string"},"repair_task":{"type":"string"},"next_milestone":{"type":"string"}},"required":["decision","summary","repair_task","next_milestone"],"additionalProperties":false}
 JSON
 }
 
-# Codex's local Linux sandbox is unreliable under Termux/PROot. The trusted
-# wrapper reads/writes the repository. Codex only receives text and returns
-# structured text; it does not need repository shell/file tools.
 codex_text_only(){
   local prompt="$1" schema="$2" output="$3" trace="$4" rc
   set +e
   (
     cd "$TMP"
     env -i HOME="$HOME" PATH="$PATH" TERM="${TERM:-xterm}" TMPDIR="$TMP" \
-      codex exec \
-        --model "$MODEL" \
-        --sandbox read-only \
-        --skip-git-repo-check \
-        --ignore-user-config \
-        --ignore-rules \
-        --ephemeral \
-        --json \
-        --output-schema "$schema" \
-        --output-last-message "$output" \
-        -C "$TMP" - < "$prompt" > "$trace" 2> "${trace}.stderr"
+      codex exec --model "$MODEL" --sandbox read-only --skip-git-repo-check \
+      --ignore-user-config --ignore-rules --ephemeral --json \
+      --output-schema "$schema" --output-last-message "$output" \
+      -C "$TMP" - < "$prompt" > "$trace" 2> "${trace}.stderr"
   )
   rc=$?
   set -e
-  if [[ $rc -ne 0 ]]; then
-    tail -n 80 "${trace}.stderr" >&2 || true
-    fail "Text-only Codex call failed"
-  fi
+  if [[ $rc -ne 0 ]]; then tail -n 80 "${trace}.stderr" >&2 || true; fail "Text-only Codex call failed"; fi
   if grep -Eq '"(command_execution|mcp_tool_call|web_search|file_change|collab_tool_call)"' "$trace"; then
     fail "Codex attempted a tool; text-only compatibility mode requires structured output only"
   fi
@@ -126,66 +53,88 @@ codex_text_only(){
 build_context(){
   local out="$1"
   node - "$ROOT" "$out" "$MAX_CONTEXT_BYTES" <<'NODE'
-const fs=require('fs'), path=require('path'), {execFileSync}=require('child_process');
-const [root,out,maxRaw]=process.argv.slice(2), max=Number(maxRaw);
+const fs=require('fs'),path=require('path'),{execFileSync}=require('child_process');
+const [root,out,maxRaw]=process.argv.slice(2),max=Number(maxRaw);
 const git=(...a)=>execFileSync('git',['-C',root,...a],{encoding:'utf8'});
-const files=git('ls-files').split('\n').filter(Boolean);
-const log=git('log','-8','--oneline','--decorate');
-const status=git('status','--short');
+const tracked=git('ls-files').split('\n').filter(Boolean);
+const untracked=git('ls-files','--others','--exclude-standard').split('\n').filter(Boolean);
+const all=[...new Set([...tracked,...untracked])];
 const exact=new Set(['AGENTS.md','FINAL_SPEC.md','.codex/supervisor.md','README.md','package.json','tsconfig.json','tsconfig.app.json','tsconfig.node.json','vite.config.ts','vite.config.js','eslint.config.js','eslint.config.mjs','index.html','.env.example','server.ts']);
 function eligible(p){
   if(p==='package-lock.json'||p==='npm-shrinkwrap.json') return false;
-  if(p.startsWith('.radmehr-agent/')||p.startsWith('scripts/radmehr-agent')||p==='scripts/radmehr-supervisor') return false;
-  if(p.startsWith('.codex/orchestrator/')) return false;
+  if(p.startsWith('.git/')||p.startsWith('.radmehr-agent/')||p.startsWith('node_modules/')||p.startsWith('dist/')) return false;
+  if(p.startsWith('.codex/orchestrator/')||p.startsWith('scripts/radmehr-agent')||p==='scripts/radmehr-supervisor') return false;
   if(exact.has(p)) return true;
   return /^(src|server)\/.+\.(ts|tsx|js|jsx|json|css|md)$/.test(p);
 }
-const selected=files.filter(eligible).sort((a,b)=>{
-  const pa=exact.has(a)?0:a.startsWith('server/')?1:2;
-  const pb=exact.has(b)?0:b.startsWith('server/')?1:2;
+const selected=all.filter(eligible).sort((a,b)=>{
+  const pa=exact.has(a)?0:a.startsWith('server/')?1:2, pb=exact.has(b)?0:b.startsWith('server/')?1:2;
   return pa-pb||a.localeCompare(b);
 });
-let text=`===== REPOSITORY FILE LIST =====\n${files.join('\n')}\n===== END FILE LIST =====\n\n`;
-text+=`===== RECENT GIT HISTORY =====\n${log}===== END GIT HISTORY =====\n\n`;
-text+=`===== WORKING TREE STATUS =====\n${status||'(clean)\n'}===== END STATUS =====\n`;
+let text=`===== REPOSITORY FILE LIST (tracked + relevant untracked) =====\n${all.join('\n')}\n===== END FILE LIST =====\n\n`;
+text+=`===== RECENT GIT HISTORY =====\n${git('log','-8','--oneline','--decorate')}===== END GIT HISTORY =====\n\n`;
+text+=`===== WORKING TREE STATUS =====\n${git('status','--short')||'(clean)\n'}===== END STATUS =====\n`;
 let bytes=Buffer.byteLength(text); const omitted=[];
 for(const rel of selected){
   const full=path.join(root,rel); if(!fs.existsSync(full)||!fs.statSync(full).isFile()) continue;
-  const content=fs.readFileSync(full,'utf8');
-  const block=`\n===== FILE: ${rel} =====\n${content}\n===== END FILE: ${rel} =====\n`;
-  const n=Buffer.byteLength(block);
-  if(n>220000||bytes+n>max){omitted.push(rel);continue;}
-  text+=block; bytes+=n;
+  const content=fs.readFileSync(full,'utf8'); const block=`\n===== FILE: ${rel} =====\n${content}\n===== END FILE: ${rel} =====\n`; const n=Buffer.byteLength(block);
+  if(n>240000||bytes+n>max){omitted.push(rel);continue;} text+=block; bytes+=n;
 }
 if(omitted.length) text+=`\n===== OMITTED DUE TO CONTEXT CAP =====\n${omitted.join('\n')}\n`;
 fs.writeFileSync(out,text);
 NODE
 }
 
-write_diff(){ git diff --no-ext-diff --binary -- . ':(exclude)package-lock.json' > "$1"; }
+write_change_report(){
+  local out="$1"
+  git diff --no-ext-diff -- . ':(exclude)package-lock.json' > "$out"
+  node - "$ROOT" "$out" <<'NODE'
+const fs=require('fs'),path=require('path'),{execFileSync}=require('child_process');
+const [root,out]=process.argv.slice(2);
+const raw=execFileSync('git',['-C',root,'ls-files','--others','--exclude-standard'],{encoding:'utf8'});
+for(const rel of raw.split('\n').filter(Boolean)){
+  if(!/^(src|server)\/.+\.(ts|tsx|js|jsx|json|css|md)$/.test(rel)) continue;
+  const full=path.join(root,rel); if(!fs.existsSync(full)||!fs.statSync(full).isFile()) continue;
+  fs.appendFileSync(out,`\n===== UNTRACKED FILE: ${rel} =====\n${fs.readFileSync(full,'utf8')}\n===== END UNTRACKED FILE =====\n`);
+}
+NODE
+}
 
-plan(){
-  local context="$TMP/context-plan.txt"; build_context "$context"
-  cat > "$TMP/plan.prompt.md" <<'PROMPT'
-You are the RadmehrAI development supervisor. You MUST NOT use tools, shell, file access, web, MCP, apply_patch, or subagents. Everything needed is supplied below as a trusted repository snapshot.
+assert_clean_for_new_run(){
+  if [[ -n "$(git status --porcelain)" ]]; then git status --short; fail "Working tree is not clean. Use 'bash scripts/radmehr-supervisor resume' to continue the existing candidate."; fi
+}
 
-FINAL_SPEC.md is the product source of truth. Choose exactly one highest-value next product-development task based on actual code state. Do not create or improve orchestration, guardian, sandbox, or supervisor infrastructure. Prefer finishing incomplete product functionality. Keep the task bounded enough for one implementation pass.
+choose_task(){
+  local mode="$1" context="$TMP/context-task.txt" report="$TMP/current-changes.txt"
+  build_context "$context"; write_change_report "$report"
+  if [[ "$mode" == "resume" ]]; then
+    cat > "$TMP/task.prompt.md" <<'PROMPT'
+You are the RadmehrAI development supervisor. You MUST NOT use tools, shell, file access, web, MCP, apply_patch, or subagents.
+
+There is already an UNCOMMITTED candidate implementation in the working tree. Do NOT choose a new product task. Infer the single bounded product task this candidate is attempting from FINAL_SPEC.md, the current changed files, and the repository snapshot. Return TASK with acceptance criteria appropriate for reviewing and repairing this existing candidate. Return STOP only if the candidate is unrelated/destructive or a genuine user decision is required.
+
+--- CURRENT CHANGES ---
+PROMPT
+    cat "$report" >> "$TMP/task.prompt.md"
+  else
+    cat > "$TMP/task.prompt.md" <<'PROMPT'
+You are the RadmehrAI development supervisor. You MUST NOT use tools, shell, file access, web, MCP, apply_patch, or subagents.
+
+FINAL_SPEC.md is the product source of truth. Choose exactly one highest-value next product-development task from the actual code state. Do not create or improve orchestration, guardian, sandbox, or supervisor infrastructure. Prefer finishing incomplete product functionality. Keep the task bounded enough for one implementation pass.
 
 Return TASK with a concise implementation instruction and concrete acceptance criteria. Return STOP only for a genuine user product decision, missing credential/access, destructive action, or architectural choice that blocks useful development.
-
---- REPOSITORY SNAPSHOT ---
 PROMPT
-  cat "$context" >> "$TMP/plan.prompt.md"
-  say "══ Supervisor: choosing next task ══"
-  codex_text_only "$TMP/plan.prompt.md" "$TMP/task.schema.json" "$TMP/task.json" "$TMP/plan.trace.jsonl"
-  cat "$TMP/task.json"
+  fi
+  printf '\n--- REPOSITORY SNAPSHOT ---\n' >> "$TMP/task.prompt.md"; cat "$context" >> "$TMP/task.prompt.md"
+  say "══ Supervisor: ${mode/resume/reconstructing current task} ══"
+  codex_text_only "$TMP/task.prompt.md" "$TMP/task.schema.json" "$TMP/task.json" "$TMP/task.trace.jsonl"; cat "$TMP/task.json"
 }
 
 implementation_prompt(){
   local context="$TMP/context-implement.txt"; build_context "$context"
   node - "$TMP/task.json" > "$TMP/implement.prompt.md" <<'NODE'
-const fs=require('fs'); const t=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
-console.log(`You are the implementation engineer for RadmehrAI. You MUST NOT use tools, shell, file access, web, MCP, apply_patch, or subagents. The trusted wrapper supplied the repository snapshot and will apply your structured output.\n\nMILESTONE: ${t.milestone}\nTASK: ${t.task}\n\nACCEPTANCE CRITERIA:\n${t.acceptance.map((x,i)=>`${i+1}. ${x}`).join('\n')}\n\nOUTPUT RULES:\n- Return IMPLEMENT with files[] and edits[].\n- For NEW files, use files[] operation=create with complete content.\n- For SMALL existing files where a full replacement is reasonable, use files[] operation=replace with complete content.\n- For LARGE existing files such as server.ts, App.tsx, or large views, use edits[] instead of returning the whole file.\n- Each edit old_text must be copied VERBATIM from the supplied snapshot and include enough surrounding context to occur exactly once. new_text is the complete replacement for that exact old_text.\n- Multiple edits may target one file; they are applied in listed order. Avoid overlapping edits.\n- Never use an edit with a generic/short anchor that could occur more than once.\n- Preserve unrelated functionality and project conventions.\n- Add focused tests where useful.\n- Do not modify FINAL_SPEC.md, AGENTS.md, .codex files, supervisor scripts, credentials, or deployment infrastructure.\n- Do not commit, push, or deploy.\n- Prefer existing dependencies.\n- Return BLOCK only for a genuine semantic impossibility in the supplied snapshot; output size is NOT a valid blocker because precise edits are available for large files.\n`);
+const fs=require('fs'),t=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
+console.log(`You are the implementation engineer for RadmehrAI. You MUST NOT use tools, shell, file access, web, MCP, apply_patch, or subagents. The trusted wrapper supplied the repository snapshot and will apply your structured output.\n\nMILESTONE: ${t.milestone}\nTASK: ${t.task}\n\nACCEPTANCE CRITERIA:\n${t.acceptance.map((x,i)=>`${i+1}. ${x}`).join('\n')}\n\nOUTPUT RULES:\n- Return IMPLEMENT with files[] and edits[].\n- New files: files[] operation=create with complete content.\n- Small existing files: files[] operation=replace with complete content.\n- Large existing files (for example server.ts/App.tsx/large views): use edits[] with verbatim unique old_text and replacement new_text.\n- Multiple non-overlapping edits may target one file. old_text must occur exactly once.\n- Preserve unrelated functionality and conventions. Add focused tests where useful.\n- Do not modify FINAL_SPEC.md, AGENTS.md, .codex files, supervisor scripts, credentials, or deployment infrastructure.\n- Do not commit, push, or deploy. Prefer existing dependencies.\n- BLOCK only for a genuine semantic impossibility; lack of tool access or large-file output size are not blockers.`);
 NODE
   printf '\n--- REPOSITORY SNAPSHOT ---\n' >> "$TMP/implement.prompt.md"; cat "$context" >> "$TMP/implement.prompt.md"
 }
@@ -193,139 +142,101 @@ NODE
 validate_change_json(){
   local json="$1"
   node - "$ROOT" "$json" "$MAX_CHANGE_BYTES" <<'NODE'
-const fs=require('fs'), path=require('path');
-const [root,input,maxRaw]=process.argv.slice(2), max=Number(maxRaw);
-const d=JSON.parse(fs.readFileSync(input,'utf8'));
+const fs=require('fs'),path=require('path'); const [root,input,maxRaw]=process.argv.slice(2),max=Number(maxRaw); const d=JSON.parse(fs.readFileSync(input,'utf8'));
 if(d.decision!=='IMPLEMENT'){console.error(`Codex returned ${d.decision}: ${d.summary}`);process.exit(20)}
-if(!Array.isArray(d.files)||!Array.isArray(d.edits)) process.exit(21);
-if(d.files.length>18||d.edits.length>30||(d.files.length+d.edits.length)<1) process.exit(22);
+if(!Array.isArray(d.files)||!Array.isArray(d.edits)||d.files.length>18||d.edits.length>30||(d.files.length+d.edits.length)<1) process.exit(21);
 const protectedExact=new Set(['FINAL_SPEC.md','AGENTS.md','.codex/supervisor.md','scripts/radmehr-supervisor','.env','.env.local','.env.production']);
-function safeRel(rel){
-  if(typeof rel!=='string'||path.isAbsolute(rel)||rel.includes('..')||path.normalize(rel)!==rel) return false;
-  if(protectedExact.has(rel)||rel.startsWith('.git/')||rel.startsWith('.codex/')||rel.startsWith('.radmehr-agent/')||rel.startsWith('scripts/radmehr-agent')) return false;
-  if(/(^|\/)(?:\.env(?:\.|$)|.*\.(?:pem|key|p12|pfx))/.test(rel)) return false;
-  return true;
-}
+function safe(rel){return typeof rel==='string'&&!path.isAbsolute(rel)&&!rel.includes('..')&&path.normalize(rel)===rel&&!protectedExact.has(rel)&&!rel.startsWith('.git/')&&!rel.startsWith('.codex/')&&!rel.startsWith('.radmehr-agent/')&&!rel.startsWith('scripts/radmehr-agent')&&!/(^|\/)(?:\.env(?:\.|$)|.*\.(?:pem|key|p12|pfx))/.test(rel)}
 let bytes=0; const fullPaths=new Set();
-for(const f of d.files){
-  if(!f||!safeRel(f.path)||typeof f.content!=='string'||!['create','replace'].includes(f.operation)||!f.content.trim()) process.exit(23);
-  if(fullPaths.has(f.path)) process.exit(24); fullPaths.add(f.path);
-  const full=path.resolve(root,f.path), prefix=path.resolve(root)+path.sep; if(!full.startsWith(prefix)) process.exit(25);
-  const exists=fs.existsSync(full); if(f.operation==='replace'&&!exists) process.exit(26); if(f.operation==='create'&&exists) process.exit(27);
-  bytes+=Buffer.byteLength(f.content);
-}
-for(const e of d.edits){
-  if(!e||!safeRel(e.path)||typeof e.old_text!=='string'||typeof e.new_text!=='string'||!e.old_text) process.exit(28);
-  if(fullPaths.has(e.path)) { console.error(`path cannot be both full replacement and edit: ${e.path}`); process.exit(29); }
-  const full=path.resolve(root,e.path); if(!fs.existsSync(full)||!fs.statSync(full).isFile()) process.exit(30);
-  bytes+=Buffer.byteLength(e.old_text)+Buffer.byteLength(e.new_text);
-}
-if(bytes>max) process.exit(31);
+for(const f of d.files){if(!f||!safe(f.path)||typeof f.content!=='string'||!['create','replace'].includes(f.operation)||!f.content.trim())process.exit(22);if(fullPaths.has(f.path))process.exit(23);fullPaths.add(f.path);const full=path.resolve(root,f.path),exists=fs.existsSync(full);if(f.operation==='replace'&&!exists)process.exit(24);if(f.operation==='create'&&exists)process.exit(25);bytes+=Buffer.byteLength(f.content)}
+for(const e of d.edits){if(!e||!safe(e.path)||typeof e.old_text!=='string'||typeof e.new_text!=='string'||!e.old_text)process.exit(26);if(fullPaths.has(e.path))process.exit(27);const full=path.resolve(root,e.path);if(!fs.existsSync(full)||!fs.statSync(full).isFile())process.exit(28);bytes+=Buffer.byteLength(e.old_text)+Buffer.byteLength(e.new_text)}
+if(bytes>max)process.exit(29);
 NODE
 }
 
 apply_changes(){
   local json="$1"; validate_change_json "$json"
   node - "$ROOT" "$json" <<'NODE'
-const fs=require('fs'), path=require('path');
-const [root,input]=process.argv.slice(2); const d=JSON.parse(fs.readFileSync(input,'utf8'));
-for(const f of d.files){
-  const full=path.resolve(root,f.path); fs.mkdirSync(path.dirname(full),{recursive:true}); fs.writeFileSync(full,f.content);
-}
-for(let i=0;i<d.edits.length;i++){
-  const e=d.edits[i], full=path.resolve(root,e.path); let text=fs.readFileSync(full,'utf8');
-  let count=0,pos=0; while((pos=text.indexOf(e.old_text,pos))!==-1){count++;pos+=Math.max(1,e.old_text.length)}
-  if(count!==1) throw new Error(`edit ${i+1} for ${e.path}: old_text occurs ${count} times; expected exactly 1`);
-  text=text.replace(e.old_text,e.new_text); fs.writeFileSync(full,text);
-}
+const fs=require('fs'),path=require('path'); const [root,input]=process.argv.slice(2),d=JSON.parse(fs.readFileSync(input,'utf8'));
+for(const f of d.files){const full=path.resolve(root,f.path);fs.mkdirSync(path.dirname(full),{recursive:true});fs.writeFileSync(full,f.content)}
+for(let i=0;i<d.edits.length;i++){const e=d.edits[i],full=path.resolve(root,e.path);let text=fs.readFileSync(full,'utf8'),count=0,pos=0;while((pos=text.indexOf(e.old_text,pos))!==-1){count++;pos+=Math.max(1,e.old_text.length)}if(count!==1)throw new Error(`edit ${i+1} for ${e.path}: old_text occurs ${count} times; expected 1`);fs.writeFileSync(full,text.replace(e.old_text,e.new_text))}
 NODE
   git diff --check
 }
 
 implement(){
-  implementation_prompt
-  say "══ Codex: implementing selected task (text-only compatibility mode) ══"
+  implementation_prompt; say "══ Codex: implementing selected task ══"
   codex_text_only "$TMP/implement.prompt.md" "$TMP/change.schema.json" "$TMP/implement.json" "$TMP/implement.trace.jsonl"
   node - "$TMP/implement.json" <<'NODE'
-const fs=require('fs'); const x=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
-console.log(JSON.stringify({decision:x.decision,summary:x.summary,files:x.files.map(f=>f.path),edits:x.edits.map(e=>e.path)},null,2));
+const fs=require('fs'),x=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));console.log(JSON.stringify({decision:x.decision,summary:x.summary,files:x.files.map(f=>f.path),edits:x.edits.map(e=>e.path)},null,2));
 NODE
   apply_changes "$TMP/implement.json"; ok "candidate changes applied to working tree"
 }
 
 validate(){
-  local log="$1"; : > "$log"; set +e
+  local log="$1" rc=0
+  : > "$log"; set +e
   (
-    npm run check
+    inner_rc=0
+    npm run check || inner_rc=$?
     if [[ -n "${TEST_DATABASE_URL:-}" ]] && npm run | grep -qE '(^|[[:space:]])test:db($|[[:space:]])'; then
-      echo "[supervisor] TEST_DATABASE_URL present; running test:db"; npm run test:db
+      echo "[supervisor] TEST_DATABASE_URL present; running test:db"
+      npm run test:db || inner_rc=$?
     else
       echo "[supervisor] TEST_DATABASE_URL unavailable or test:db absent; external DB verification not run"
     fi
-    git diff --check
+    git diff --check || inner_rc=$?
+    exit "$inner_rc"
   ) > >(tee -a "$log") 2> >(tee -a "$log" >&2)
-  local rc=$?; set -e; return $rc
+  rc=$?; set -e; return "$rc"
 }
 
 review(){
-  local validation_log="$1" suffix="$2" context="$TMP/context-review-${suffix}.txt" diff="$TMP/diff-${suffix}.patch"
-  build_context "$context"; write_diff "$diff"
+  local validation_log="$1"
+  local suffix="$2"
+  local context="$TMP/context-review-${suffix}.txt"
+  local report="$TMP/change-report-${suffix}.txt"
+  build_context "$context"; write_change_report "$report"
   cat > "$TMP/review-${suffix}.prompt.md" <<'PROMPT'
-You are the RadmehrAI development supervisor reviewing one implementation. You MUST NOT use tools, shell, file access, web, MCP, apply_patch, or subagents. The selected task, validation output, actual git diff, and current snapshot are supplied below.
+You are the RadmehrAI development supervisor reviewing an existing candidate. You MUST NOT use tools, shell, file access, web, MCP, apply_patch, or subagents.
 
 FINAL_SPEC.md is the product source of truth. Review as a practical lead engineer.
-PASS when the selected bounded task is genuinely implemented and local validation is acceptable.
-FIX only for a concrete code defect correctable in one focused edit pass.
-STOP for a genuine user/access/destructive decision or unavailable external verification. Do not rewrite working code merely because an external DB/service is unavailable; use STOP and state the remaining verification.
+PASS when the selected bounded task is genuinely implemented and the validations that are available have passed.
+FIX only for a concrete code defect correctable in one focused pass.
+STOP for a genuine user/access/destructive decision or unavailable external verification. If local code is good but TEST_DATABASE_URL or another external verifier is unavailable, STOP and state only the remaining verification step; do not rewrite working code.
 Do not request guardian/orchestration/sandbox infrastructure.
 
---- SELECTED TASK ---
+--- SELECTED/RECONSTRUCTED TASK ---
 PROMPT
   cat "$TMP/task.json" >> "$TMP/review-${suffix}.prompt.md"
-  printf '\n--- VALIDATION OUTPUT ---\n' >> "$TMP/review-${suffix}.prompt.md"; tail -n 180 "$validation_log" >> "$TMP/review-${suffix}.prompt.md" 2>/dev/null || true
-  printf '\n--- ACTUAL GIT DIFF ---\n' >> "$TMP/review-${suffix}.prompt.md"; cat "$diff" >> "$TMP/review-${suffix}.prompt.md"
+  printf '\n--- VALIDATION OUTPUT ---\n' >> "$TMP/review-${suffix}.prompt.md"; tail -n 220 "$validation_log" >> "$TMP/review-${suffix}.prompt.md" 2>/dev/null || true
+  printf '\n--- CURRENT CHANGES (including untracked files) ---\n' >> "$TMP/review-${suffix}.prompt.md"; cat "$report" >> "$TMP/review-${suffix}.prompt.md"
   printf '\n--- CURRENT REPOSITORY SNAPSHOT ---\n' >> "$TMP/review-${suffix}.prompt.md"; cat "$context" >> "$TMP/review-${suffix}.prompt.md"
   say "══ Supervisor: reviewing implementation ══"
   codex_text_only "$TMP/review-${suffix}.prompt.md" "$TMP/review.schema.json" "$TMP/review-${suffix}.json" "$TMP/review-${suffix}.trace.jsonl"; cat "$TMP/review-${suffix}.json"
 }
 
 repair(){
-  local review_json="$1" context="$TMP/context-repair.txt" diff="$TMP/diff-repair.patch"
-  build_context "$context"; write_diff "$diff"
+  local review_json="$1"
+  local context="$TMP/context-repair.txt" report="$TMP/change-report-repair.txt"
+  build_context "$context"; write_change_report "$report"
   node - "$review_json" > "$TMP/repair.prompt.md" <<'NODE'
-const fs=require('fs'); const r=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
-console.log(`You are repairing one concrete defect in the current RadmehrAI candidate. You MUST NOT use tools, shell, file access, web, MCP, apply_patch, or subagents.\n\nSUPERVISOR REPAIR TASK:\n${r.repair_task}\n\nReturn IMPLEMENT with files[] and edits[]. Use complete file replacement only for new/small files; use precise unique old_text/new_text edits for large existing files. Preserve unrelated candidate work. Do not modify FINAL_SPEC.md, AGENTS.md, .codex files, supervisor scripts, credentials, or deployment infrastructure. Return BLOCK only for a genuine semantic impossibility.`);
+const fs=require('fs'),r=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));console.log(`You are repairing one concrete defect in the current RadmehrAI candidate. You MUST NOT use tools, shell, file access, web, MCP, apply_patch, or subagents.\n\nSUPERVISOR REPAIR TASK:\n${r.repair_task}\n\nReturn IMPLEMENT with files[] and edits[]. Replace new/small files completely when appropriate; use precise unique old_text/new_text edits for large existing files. Preserve unrelated candidate work. Do not modify FINAL_SPEC.md, AGENTS.md, .codex files, supervisor scripts, credentials, or deployment infrastructure. BLOCK only for a genuine semantic impossibility.`);
 NODE
-  printf '\n--- CURRENT GIT DIFF ---\n' >> "$TMP/repair.prompt.md"; cat "$diff" >> "$TMP/repair.prompt.md"
+  printf '\n--- CURRENT CHANGES ---\n' >> "$TMP/repair.prompt.md"; cat "$report" >> "$TMP/repair.prompt.md"
   printf '\n--- CURRENT REPOSITORY SNAPSHOT ---\n' >> "$TMP/repair.prompt.md"; cat "$context" >> "$TMP/repair.prompt.md"
-  say "══ Codex: focused repair (text-only compatibility mode) ══"
+  say "══ Codex: focused repair ══"
   codex_text_only "$TMP/repair.prompt.md" "$TMP/change.schema.json" "$TMP/repair.json" "$TMP/repair.trace.jsonl"
   node - "$ROOT" "$TMP/repair.json" <<'NODE'
-const fs=require('fs'),path=require('path'); const [root,file]=process.argv.slice(2); const d=JSON.parse(fs.readFileSync(file,'utf8'));
-for(const f of d.files||[]) if(f.operation==='create'&&fs.existsSync(path.resolve(root,f.path))) f.operation='replace';
-fs.writeFileSync(file,JSON.stringify(d));
+const fs=require('fs'),path=require('path');const [root,file]=process.argv.slice(2),d=JSON.parse(fs.readFileSync(file,'utf8'));for(const f of d.files||[])if(f.operation==='create'&&fs.existsSync(path.resolve(root,f.path)))f.operation='replace';fs.writeFileSync(file,JSON.stringify(d));
 NODE
   apply_changes "$TMP/repair.json"; ok "focused repair applied to working tree"
 }
 
-status(){
-  echo "Radmehr Supervisor v1.2"
-  echo "Repository: $ROOT"
-  echo "Branch: $(git branch --show-current)"
-  echo "Model: $MODEL"
-  echo "Codex mode: text-only + precise edits (Termux/PROot compatible)"
-  echo; git status --short
-}
-
-run(){
-  assert_clean; write_schemas; plan
-  local decision="$(node -e "const x=require(process.argv[1]);process.stdout.write(x.decision)" "$TMP/task.json")"
-  [[ "$decision" == "TASK" ]] || { say "Supervisor stopped before editing."; exit 0; }
-  implement
-  say "══ Validation ══"
-  if validate "$TMP/validation-1.log"; then ok "validation passed"; else say "Validation failed; supervisor will inspect the concrete failure before deciding on one repair."; fi
-  review "$TMP/validation-1.log" "1"
-  decision="$(node -e "const x=require(process.argv[1]);process.stdout.write(x.decision)" "$TMP/review-1.json")"
+finish_cycle(){
+  local validation_log="$1"
+  review "$validation_log" "1"
+  local decision="$(node -e "const x=require(process.argv[1]);process.stdout.write(x.decision)" "$TMP/review-1.json")"
   if [[ "$decision" == "FIX" ]]; then
     repair "$TMP/review-1.json"
     say "══ Validation after repair ══"
@@ -333,7 +244,10 @@ run(){
     review "$TMP/validation-2.log" "2"
     decision="$(node -e "const x=require(process.argv[1]);process.stdout.write(x.decision)" "$TMP/review-2.json")"
   fi
-  say "══ Final working-tree state ══"; git status --short; git diff --stat; echo
+  say "══ Final working-tree state ══"
+  git status --short
+  git diff --stat
+  echo
   case "$decision" in
     PASS) ok "Supervisor accepted this development task. Changes remain uncommitted for review." ;;
     STOP) say "Supervisor stopped for a genuine user/access/verification step. Candidate changes remain uncommitted." ;;
@@ -341,8 +255,38 @@ run(){
   esac
 }
 
+run_new(){
+  assert_clean_for_new_run; write_schemas; choose_task new
+  local decision="$(node -e "const x=require(process.argv[1]);process.stdout.write(x.decision)" "$TMP/task.json")"
+  [[ "$decision" == "TASK" ]] || { say "Supervisor stopped before editing."; exit 0; }
+  implement
+  say "══ Validation ══"
+  if validate "$TMP/validation-1.log"; then ok "validation passed"; else say "Validation failed; supervisor will inspect the concrete failure."; fi
+  finish_cycle "$TMP/validation-1.log"
+}
+
+resume(){
+  [[ -n "$(git status --porcelain)" ]] || fail "There is no uncommitted candidate to resume"
+  write_schemas; choose_task resume
+  local decision="$(node -e "const x=require(process.argv[1]);process.stdout.write(x.decision)" "$TMP/task.json")"
+  [[ "$decision" == "TASK" ]] || { say "Supervisor stopped before modifying the current candidate."; exit 0; }
+  say "══ Validation of current candidate ══"
+  if validate "$TMP/validation-1.log"; then ok "validation passed"; else say "Validation failed; supervisor will inspect and may make one focused repair."; fi
+  finish_cycle "$TMP/validation-1.log"
+}
+
+status(){
+  echo "Radmehr Supervisor v1.3"
+  echo "Repository: $ROOT"
+  echo "Branch: $(git branch --show-current)"
+  echo "Model: $MODEL"
+  echo "Codex mode: text-only + precise edits (Termux/PROot compatible)"
+  echo; git status --short
+}
+
 case "${1:-run}" in
-  run) run ;;
+  run) run_new ;;
+  resume) resume ;;
   status) status ;;
-  *) echo "Usage: bash scripts/radmehr-supervisor [run|status]" >&2; exit 2 ;;
+  *) echo "Usage: bash scripts/radmehr-supervisor [run|resume|status]" >&2; exit 2 ;;
 esac
