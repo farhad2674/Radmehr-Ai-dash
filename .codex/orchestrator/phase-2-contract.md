@@ -54,6 +54,14 @@ This contract removes ambiguity for the Phase 2 implementation. It is intentiona
 - Phase 2 must not introduce any user-role or account-status mutation path that can bypass that database invariant.
 - The existing PostgreSQL integration test covering prevention of demotion of the last active `SUPER_ADMIN` is required to pass before Phase 2 can receive Guardian PASS.
 
+## Database dependency boundary
+- Authentication modules must not open the production/default PostgreSQL connection as an import-time side effect. Importing an auth module in a test must never require `DATABASE_URL` merely to load the module.
+- Build auth logic around an explicit dependency such as an injected node-postgres `Pool`/`PoolClient`, injected Drizzle database instance, or a factory whose caller supplies the database dependency. The exact type may follow the existing Phase 1 DB abstractions.
+- Production wiring in `server.ts` may obtain the normal application database through the existing production database helper and pass it into the auth factory/service at startup or route registration time.
+- DB-backed tests must construct their own test pool/database directly from `process.env.TEST_DATABASE_URL` and inject that dependency into the auth service/handlers. They must never set, alias, copy, or substitute `DATABASE_URL=TEST_DATABASE_URL`.
+- Avoid exporting an eagerly-created singleton such as `export const auth = createAuthentication()` if that factory immediately calls the production `getDatabasePool()` during module evaluation. Prefer exporting the factory/service primitives and let `server.ts` construct the production instance explicitly.
+- Test cleanup must close only the pool created by the test and must not close or mutate a production/default application pool.
+
 ## Implementer / validator responsibility split
 - The text-only Implementer is a code generator, not the acceptance validator. It is intentionally forbidden from using repository tools, shell commands, network, or the database.
 - The tracked source context supplied in the prompt is the authoritative snapshot the Implementer must use for candidate generation. The Implementer must not return `BLOCK` merely because it cannot independently re-open repository files, inspect migration state with tools, execute the database, or prove that the candidate compiles.
