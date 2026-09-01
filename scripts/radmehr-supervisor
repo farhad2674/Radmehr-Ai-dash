@@ -1,0 +1,203 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "Run inside the repository" >&2; exit 1; }
+cd "$ROOT"
+
+MODEL="${RADMEHR_CODEX_MODEL:-gpt-5.6-sol}"
+TMP="$(mktemp -d "${TMPDIR:-/tmp}/radmehr-supervisor.XXXXXX")"
+trap 'rm -rf "$TMP"' EXIT
+
+say(){ printf '\n%s\n' "$*"; }
+ok(){ printf '✓ %s\n' "$*"; }
+fail(){ printf '\n✗ %s\n' "$*" >&2; exit 1; }
+
+for cmd in codex git npm node; do
+  command -v "$cmd" >/dev/null 2>&1 || fail "$cmd not found"
+done
+[[ -f FINAL_SPEC.md ]] || fail "FINAL_SPEC.md is missing"
+[[ -f .codex/supervisor.md ]] || fail ".codex/supervisor.md is missing"
+
+if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
+  git status --short
+  fail "Tracked working tree must be clean before a supervisor run"
+fi
+
+cat > "$TMP/task.schema.json" <<'JSON'
+{
+  "type":"object",
+  "properties":{
+    "decision":{"type":"string","enum":["TASK","STOP"]},
+    "milestone":{"type":"string"},
+    "task":{"type":"string"},
+    "acceptance":{"type":"array","items":{"type":"string"}},
+    "reason":{"type":"string"}
+  },
+  "required":["decision","milestone","task","acceptance","reason"],
+  "additionalProperties":false
+}
+JSON
+
+cat > "$TMP/review.schema.json" <<'JSON'
+{
+  "type":"object",
+  "properties":{
+    "decision":{"type":"string","enum":["PASS","FIX","STOP"]},
+    "summary":{"type":"string"},
+    "repair_task":{"type":"string"},
+    "next_milestone":{"type":"string"}
+  },
+  "required":["decision","summary","repair_task","next_milestone"],
+  "additionalProperties":false
+}
+JSON
+
+run_codex(){
+  local sandbox="$1" prompt="$2" schema="$3" output="$4" trace="$5"
+  codex exec \
+    --model "$MODEL" \
+    --sandbox "$sandbox" \
+    --ephemeral \
+    --json \
+    --output-schema "$schema" \
+    --output-last-message "$output" \
+    -C "$ROOT" - < "$prompt" > "$trace"
+}
+
+plan(){
+  cat > "$TMP/plan.prompt.md" <<'PROMPT'
+Read FINAL_SPEC.md, .codex/supervisor.md, AGENTS.md, the current repository, relevant tests, and recent git history.
+
+Act as the Radmehr Supervisor. Determine exactly one highest-value next product-development task. Inspect before deciding. Do not create more orchestration/guardian infrastructure. Prefer finishing partially implemented product functionality.
+
+Return TASK with a concise implementation instruction and concrete acceptance criteria. Return STOP only if a genuine user decision/access/destructive action is required before product development can continue.
+PROMPT
+  say "══ Supervisor: choosing next task ══"
+  run_codex read-only "$TMP/plan.prompt.md" "$TMP/task.schema.json" "$TMP/task.json" "$TMP/plan.trace.jsonl"
+  cat "$TMP/task.json"
+}
+
+validate(){
+  local log="$1"
+  : > "$log"
+  set +e
+  (
+    npm run check
+    if [[ -n "${TEST_DATABASE_URL:-}" ]] && npm run | grep -qE '(^|[[:space:]])test:db($|[[:space:]])'; then
+      npm run test:db
+    fi
+    git diff --check
+  ) > >(tee -a "$log") 2> >(tee -a "$log" >&2)
+  local rc=$?
+  set -e
+  return $rc
+}
+
+implementation_prompt(){
+  node - "$TMP/task.json" > "$TMP/implement.prompt.md" <<'NODE'
+const fs=require('fs');
+const t=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
+console.log(`You are the implementation engineer working inside the RadmehrAI repository.\n\nRead AGENTS.md and FINAL_SPEC.md, inspect the relevant code, then implement this supervisor-selected task:\n\nMILESTONE: ${t.milestone}\nTASK: ${t.task}\n\nACCEPTANCE CRITERIA:\n${t.acceptance.map((x,i)=>`${i+1}. ${x}`).join('\n')}\n\nRequirements:\n- Work directly in the repository.\n- Preserve unrelated functionality.\n- Use existing project conventions.\n- Add/update focused tests where appropriate.\n- Do not commit, push, deploy, or change production credentials.\n- Run useful local checks as you work.\n- Finish the implementation rather than only describing it.\n`);
+NODE
+}
+
+implement(){
+  implementation_prompt
+  say "══ Codex: implementing selected task ══"
+  codex exec \
+    --model "$MODEL" \
+    --sandbox workspace-write \
+    --ephemeral \
+    -C "$ROOT" - < "$TMP/implement.prompt.md" | tee "$TMP/implement.log"
+}
+
+review(){
+  local validation_log="$1" suffix="$2"
+  cat > "$TMP/review-${suffix}.prompt.md" <<PROMPT
+Read .codex/supervisor.md, FINAL_SPEC.md, AGENTS.md, the supervisor task in $TMP/task.json, the actual current git diff, and relevant changed files/tests.
+
+Deterministic validation output is provided below:
+
+--- VALIDATION OUTPUT ---
+$(tail -n 160 "$validation_log" 2>/dev/null || true)
+--- END VALIDATION OUTPUT ---
+
+Review the actual implementation as lead engineer. PASS only if the selected task and acceptance criteria are genuinely satisfied and the validation result is acceptable. FIX if there is a concrete, focused defect that Codex can repair now. STOP only if a genuine user decision/access/destructive action is required.
+
+If FIX, make repair_task narrow and executable. Do not request new orchestration/guardian infrastructure.
+PROMPT
+  say "══ Supervisor: reviewing implementation ══"
+  run_codex read-only "$TMP/review-${suffix}.prompt.md" "$TMP/review.schema.json" "$TMP/review-${suffix}.json" "$TMP/review-${suffix}.trace.jsonl"
+  cat "$TMP/review-${suffix}.json"
+}
+
+repair(){
+  local review_json="$1"
+  node - "$review_json" > "$TMP/repair.prompt.md" <<'NODE'
+const fs=require('fs');
+const r=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
+console.log(`Inspect the current RadmehrAI repository and git diff. The supervisor found this concrete defect:\n\n${r.repair_task}\n\nMake only the focused repair needed. Preserve unrelated changes. Add/update a test if it directly proves the repair. Do not commit, push, deploy, or change production credentials. Finish the repair in the working tree.`);
+NODE
+  say "══ Codex: focused repair ══"
+  codex exec \
+    --model "$MODEL" \
+    --sandbox workspace-write \
+    --ephemeral \
+    -C "$ROOT" - < "$TMP/repair.prompt.md" | tee "$TMP/repair.log"
+}
+
+status(){
+  echo "Radmehr Supervisor v1"
+  echo "Repository: $ROOT"
+  echo "Branch: $(git branch --show-current)"
+  echo "Model: $MODEL"
+  echo
+  git status --short
+}
+
+run(){
+  plan
+  local decision
+  decision="$(node -e "const x=require(process.argv[1]);process.stdout.write(x.decision)" "$TMP/task.json")"
+  [[ "$decision" == "TASK" ]] || { say "Supervisor stopped before editing."; exit 0; }
+
+  implement
+
+  say "══ Validation ══"
+  if validate "$TMP/validation-1.log"; then
+    ok "validation passed"
+  else
+    say "Validation failed; supervisor will inspect the failure before deciding on one repair."
+  fi
+
+  review "$TMP/validation-1.log" "1"
+  decision="$(node -e "const x=require(process.argv[1]);process.stdout.write(x.decision)" "$TMP/review-1.json")"
+
+  if [[ "$decision" == "FIX" ]]; then
+    repair "$TMP/review-1.json"
+    say "══ Validation after repair ══"
+    if validate "$TMP/validation-2.log"; then
+      ok "validation passed after repair"
+    else
+      say "Validation still has failures."
+    fi
+    review "$TMP/validation-2.log" "2"
+    decision="$(node -e "const x=require(process.argv[1]);process.stdout.write(x.decision)" "$TMP/review-2.json")"
+  fi
+
+  say "══ Final working-tree state ══"
+  git status --short
+  git diff --stat
+  echo
+  if [[ "$decision" == "PASS" ]]; then
+    ok "Supervisor accepted this development task. Changes remain uncommitted for review."
+  else
+    say "Supervisor did not accept the task. Changes remain uncommitted so they can be inspected or revised."
+  fi
+}
+
+case "${1:-run}" in
+  run) run ;;
+  status) status ;;
+  *) echo "Usage: bash scripts/radmehr-supervisor [run|status]" >&2; exit 2 ;;
+esac
