@@ -62,6 +62,11 @@ This contract removes ambiguity for the Phase 2 implementation. It is intentiona
 - Avoid exporting an eagerly-created singleton such as `export const auth = createAuthentication()` if that factory immediately calls the production `getDatabasePool()` during module evaluation. Prefer exporting the factory/service primitives and let `server.ts` construct the production instance explicitly.
 - Test cleanup must close only the pool created by the test and must not close or mutate a production/default application pool.
 
+## TypeScript / lint compatibility
+- Generated Phase 2 auth source must satisfy the repository's existing TypeScript and ESLint rules without disabling, weakening, or bypassing them.
+- Do not use TypeScript `namespace` declarations. The repository enforces `@typescript-eslint/no-namespace`; use normal ES module exports/imports, plain objects, functions, interfaces, and type aliases instead.
+- Do not add file-level or inline ESLint-disable directives merely to make generated auth code pass validation unless an existing repository pattern explicitly requires that exact rule exception.
+
 ## Implementer / validator responsibility split
 - The text-only Implementer is a code generator, not the acceptance validator. It is intentionally forbidden from using repository tools, shell commands, network, or the database.
 - The tracked source context supplied in the prompt is the authoritative snapshot the Implementer must use for candidate generation. The Implementer must not return `BLOCK` merely because it cannot independently re-open repository files, inspect migration state with tools, execute the database, or prove that the candidate compiles.
