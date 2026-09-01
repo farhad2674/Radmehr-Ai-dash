@@ -8,6 +8,8 @@ This contract removes ambiguity for the Phase 2 implementation. It is intentiona
 - User creation is a SUPER_ADMIN-only operation backed by PostgreSQL for the account/auth domain.
 - A newly provisioned account is always created as `USER`, `api_access=false`, `monthly_quota=0`, `status=PENDING`, and `must_change_password=true` regardless of client-supplied privilege fields.
 - The accepted provisioning fields are limited to username, email, display name, and optional department. Role/API access/quota/status/session-version values from the request body are ignored or rejected.
+- All existing legacy `/api/users` routes must stop being anonymously callable during Phase 2. It is acceptable for quota-related handlers to remain backed by the legacy JSON store until their later migration, but the whole `/api/users` namespace must be protected by authenticated SUPER_ADMIN middleware before those handlers execute. This is a security boundary only, not a quota/domain migration.
+- Authentication routes that must remain public for their intended purpose, such as login, activation, and reset-token consumption, must be registered before any `/api/users` SUPER_ADMIN guard. Protected auth routes such as provisioning/reset-token issuance must perform their own authenticated SUPER_ADMIN check.
 
 ## Activation and reset tokens
 - Activation and password-reset tokens are opaque cryptographically-random 32-byte values.
@@ -47,7 +49,29 @@ This contract removes ambiguity for the Phase 2 implementation. It is intentiona
 - Disabled/non-active users, revoked sessions, expired sessions, and session-version mismatches are rejected.
 - Login errors are generic and do not disclose whether username/email exists.
 
+## Last SUPER_ADMIN invariant
+- Phase 1 already established a database-level invariant preventing demotion/disablement of the last active `SUPER_ADMIN`; Phase 2 must preserve and rely on that defense-in-depth rather than creating an application bypass.
+- Phase 2 must not introduce any user-role or account-status mutation path that can bypass that database invariant.
+- The existing PostgreSQL integration test covering prevention of demotion of the last active `SUPER_ADMIN` is required to pass before Phase 2 can receive Guardian PASS.
+
+## Mandatory Phase 2 validation
+- `TEST_DATABASE_URL` is mandatory for a Phase 2 acceptance run. If the safe local/test database gate cannot validate it, the run is incomplete and must not proceed to Guardian PASS.
+- The existing PostgreSQL DB suite must pass, including user defaults, identity uniqueness, last-active-SUPER_ADMIN protection, and immutable audit behavior.
+- Add focused authentication tests beyond password hashing. At minimum validate:
+  - successful login creates a server-side session while persisting only the session-token hash;
+  - invalid user and invalid password produce the same generic login failure;
+  - logout revokes the current session;
+  - idle expiry, absolute expiry, and idle refresh without extending absolute expiry;
+  - disabled/non-active user rejection and `session_version` mismatch invalidation;
+  - activation token expiry and single-use consumption;
+  - password-reset token expiry/single-use, password update, session-version increment, and existing-session revocation;
+  - SUPER_ADMIN-only provisioning and reset-token issuance;
+  - provisioned-user forced defaults (`USER`, no API access, zero quota, `PENDING`, must-change-password);
+  - bootstrap succeeds only on an empty users table, partial bootstrap configuration fails closed, and existing users prevent a second bootstrap admin;
+  - the legacy `/api/users` namespace is rejected without authenticated SUPER_ADMIN access.
+- Tests may use the disposable `TEST_DATABASE_URL` only. They must not call real model/provider APIs or production infrastructure.
+
 ## Phase boundary
 - It is acceptable to migrate only the user/account endpoints required for secure authentication from JSON persistence to PostgreSQL in this phase.
 - Do not migrate templates, assets, generation/quota/provider behavior, backups, or unrelated JSON persistence yet.
-- Broader RBAC enforcement over unrelated application routes remains Phase 3, except the minimum SUPER_ADMIN check required to prevent public account provisioning/reset-token issuance in Phase 2.
+- Broader RBAC enforcement over unrelated application routes remains Phase 3. The Phase 2 exception is the minimum SUPER_ADMIN enforcement required around account provisioning/reset-token issuance and the existing legacy `/api/users` namespace so those account/quota mutation routes are no longer anonymous.
