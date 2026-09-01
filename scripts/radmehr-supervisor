@@ -5,6 +5,8 @@ ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "Run inside the re
 cd "$ROOT"
 
 MODEL="${RADMEHR_CODEX_MODEL:-gpt-5.6-sol}"
+MAX_CONTEXT_BYTES="${RADMEHR_SUPERVISOR_CONTEXT_BYTES:-950000}"
+MAX_CHANGE_BYTES="${RADMEHR_SUPERVISOR_CHANGE_BYTES:-700000}"
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/radmehr-supervisor.XXXXXX")"
 trap 'rm -rf "$TMP"' EXIT
 
@@ -18,12 +20,15 @@ done
 [[ -f FINAL_SPEC.md ]] || fail "FINAL_SPEC.md is missing"
 [[ -f .codex/supervisor.md ]] || fail ".codex/supervisor.md is missing"
 
-if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
-  git status --short
-  fail "Tracked working tree must be clean before a supervisor run"
-fi
+assert_clean(){
+  if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
+    git status --short
+    fail "Tracked working tree must be clean before a supervisor run"
+  fi
+}
 
-cat > "$TMP/task.schema.json" <<'JSON'
+write_schemas(){
+  cat > "$TMP/task.schema.json" <<'JSON'
 {
   "type":"object",
   "properties":{
@@ -38,7 +43,29 @@ cat > "$TMP/task.schema.json" <<'JSON'
 }
 JSON
 
-cat > "$TMP/review.schema.json" <<'JSON'
+  cat > "$TMP/change.schema.json" <<'JSON'
+{
+  "type":"object",
+  "properties":{
+    "decision":{"type":"string","enum":["IMPLEMENT","BLOCK"]},
+    "summary":{"type":"string"},
+    "files":{"type":"array","maxItems":18,"items":{
+      "type":"object",
+      "properties":{
+        "path":{"type":"string"},
+        "operation":{"type":"string","enum":["create","replace"]},
+        "content":{"type":"string"}
+      },
+      "required":["path","operation","content"],
+      "additionalProperties":false
+    }}
+  },
+  "required":["decision","summary","files"],
+  "additionalProperties":false
+}
+JSON
+
+  cat > "$TMP/review.schema.json" <<'JSON'
 {
   "type":"object",
   "properties":{
@@ -51,30 +78,184 @@ cat > "$TMP/review.schema.json" <<'JSON'
   "additionalProperties":false
 }
 JSON
+}
 
-run_codex(){
-  local sandbox="$1" prompt="$2" schema="$3" output="$4" trace="$5"
-  codex exec \
-    --model "$MODEL" \
-    --sandbox "$sandbox" \
-    --ephemeral \
-    --json \
-    --output-schema "$schema" \
-    --output-last-message "$output" \
-    -C "$ROOT" - < "$prompt" > "$trace"
+# Codex cannot use its Linux sandbox reliably under Termux/PROot. All repository
+# reading/writing is therefore performed by this trusted wrapper. Codex receives
+# a text snapshot and returns structured text only; it never needs shell/file tools.
+codex_text_only(){
+  local prompt="$1" schema="$2" output="$3" trace="$4" rc
+  set +e
+  (
+    cd "$TMP"
+    env -i HOME="$HOME" PATH="$PATH" TERM="${TERM:-xterm}" TMPDIR="$TMP" \
+      codex exec \
+        --model "$MODEL" \
+        --sandbox read-only \
+        --skip-git-repo-check \
+        --ignore-user-config \
+        --ignore-rules \
+        --ephemeral \
+        --json \
+        --output-schema "$schema" \
+        --output-last-message "$output" \
+        -C "$TMP" - < "$prompt" > "$trace" 2> "${trace}.stderr"
+  )
+  rc=$?
+  set -e
+
+  if [[ $rc -ne 0 ]]; then
+    tail -n 80 "${trace}.stderr" >&2 || true
+    fail "Text-only Codex call failed"
+  fi
+  if grep -Eq '"(command_execution|mcp_tool_call|web_search|file_change|collab_tool_call)"' "$trace"; then
+    fail "Codex attempted a tool. Supervisor compatibility mode requires text-only output."
+  fi
+  [[ -s "$output" ]] || fail "Codex returned no structured output"
+}
+
+build_context(){
+  local out="$1"
+  node - "$ROOT" "$out" "$MAX_CONTEXT_BYTES" <<'NODE'
+const fs = require('fs');
+const path = require('path');
+const { execFileSync } = require('child_process');
+const [root, out, maxRaw] = process.argv.slice(2);
+const max = Number(maxRaw);
+const git = (...args) => execFileSync('git', ['-C', root, ...args], { encoding: 'utf8' });
+const files = git('ls-files').split('\n').filter(Boolean);
+const log = git('log', '-8', '--oneline', '--decorate');
+const status = git('status', '--short');
+
+const exact = new Set([
+  'AGENTS.md','FINAL_SPEC.md','.codex/supervisor.md','README.md','package.json',
+  'tsconfig.json','tsconfig.app.json','tsconfig.node.json','vite.config.ts','vite.config.js',
+  'eslint.config.js','eslint.config.mjs','index.html','.env.example','server.ts'
+]);
+function eligible(p) {
+  if (p === 'package-lock.json' || p === 'npm-shrinkwrap.json') return false;
+  if (p.startsWith('.codex/orchestrator/') || p.startsWith('.radmehr-agent/')) return false;
+  if (p.startsWith('scripts/radmehr-agent') || p === 'scripts/radmehr-supervisor') return false;
+  if (exact.has(p)) return true;
+  if (/^(src|server)\/.+\.(ts|tsx|js|jsx|json|css|md)$/.test(p)) return true;
+  return false;
+}
+const selected = files.filter(eligible);
+const priority = p => exact.has(p) ? 0 : p.startsWith('server/') ? 1 : 2;
+selected.sort((a,b) => priority(a)-priority(b) || a.localeCompare(b));
+
+let text = `===== REPOSITORY FILE LIST =====\n${files.join('\n')}\n===== END FILE LIST =====\n\n`;
+text += `===== RECENT GIT HISTORY =====\n${log}===== END GIT HISTORY =====\n\n`;
+text += `===== WORKING TREE STATUS =====\n${status || '(clean)\n'}===== END STATUS =====\n`;
+let bytes = Buffer.byteLength(text);
+const omitted = [];
+for (const rel of selected) {
+  const full = path.join(root, rel);
+  if (!fs.existsSync(full) || !fs.statSync(full).isFile()) continue;
+  const content = fs.readFileSync(full, 'utf8');
+  const block = `\n===== FILE: ${rel} =====\n${content}\n===== END FILE: ${rel} =====\n`;
+  const n = Buffer.byteLength(block);
+  if (n > 180000 || bytes + n > max) { omitted.push(rel); continue; }
+  text += block;
+  bytes += n;
+}
+if (omitted.length) text += `\n===== OMITTED DUE TO CONTEXT CAP =====\n${omitted.join('\n')}\n`;
+fs.writeFileSync(out, text);
+NODE
+}
+
+write_diff(){
+  git diff --no-ext-diff --binary -- . ':(exclude)package-lock.json' > "$1"
 }
 
 plan(){
+  local context="$TMP/context-plan.txt"
+  build_context "$context"
   cat > "$TMP/plan.prompt.md" <<'PROMPT'
-Read FINAL_SPEC.md, .codex/supervisor.md, AGENTS.md, the current repository, relevant tests, and recent git history.
+You are the RadmehrAI development supervisor. You MUST NOT use tools, shell, file access, web, MCP, apply_patch, or subagents. Everything you need is supplied below as a trusted repository snapshot.
 
-Act as the Radmehr Supervisor. Determine exactly one highest-value next product-development task. Inspect before deciding. Do not create more orchestration/guardian infrastructure. Prefer finishing partially implemented product functionality.
+FINAL_SPEC.md is the product source of truth. Choose exactly one highest-value next product-development task based on the actual code state. Do not create or improve orchestration, guardian, sandbox, or supervisor infrastructure. Prefer finishing incomplete product functionality.
 
-Return TASK with a concise implementation instruction and concrete acceptance criteria. Return STOP only if a genuine user decision/access/destructive action is required before product development can continue.
+Return TASK with a bounded implementation instruction and concrete acceptance criteria. Return STOP only if a genuine user product decision, missing credential/access, destructive action, or architectural choice is required before useful development can continue.
+
+Do not require a live external service merely to begin implementation when focused local/testable work can proceed.
+
+--- REPOSITORY SNAPSHOT ---
 PROMPT
+  cat "$context" >> "$TMP/plan.prompt.md"
   say "══ Supervisor: choosing next task ══"
-  run_codex read-only "$TMP/plan.prompt.md" "$TMP/task.schema.json" "$TMP/task.json" "$TMP/plan.trace.jsonl"
+  codex_text_only "$TMP/plan.prompt.md" "$TMP/task.schema.json" "$TMP/task.json" "$TMP/plan.trace.jsonl"
   cat "$TMP/task.json"
+}
+
+implementation_prompt(){
+  local context="$TMP/context-implement.txt"
+  build_context "$context"
+  node - "$TMP/task.json" > "$TMP/implement.prompt.md" <<'NODE'
+const fs=require('fs');
+const t=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
+console.log(`You are the implementation engineer for RadmehrAI. You MUST NOT use tools, shell, file access, web, MCP, apply_patch, or subagents. The trusted wrapper has supplied the repository snapshot below and will apply your structured file output.\n\nImplement this selected product task:\n\nMILESTONE: ${t.milestone}\nTASK: ${t.task}\n\nACCEPTANCE CRITERIA:\n${t.acceptance.map((x,i)=>`${i+1}. ${x}`).join('\n')}\n\nOUTPUT RULES:\n- Return IMPLEMENT with the complete final contents of every file that must change.\n- Use operation=replace for an existing file and operation=create for a new file.\n- Do not return diff fragments; each file content must be complete.\n- Preserve unrelated functionality and existing project conventions.\n- Add/update focused tests where useful.\n- Do not modify FINAL_SPEC.md, AGENTS.md, .codex files, supervisor scripts, credentials, or deployment infrastructure.\n- Do not commit, push, or deploy.\n- Prefer existing dependencies and avoid dependency churn.\n- Return BLOCK only if the supplied snapshot makes the requested implementation semantically impossible; lack of tool access is not a valid BLOCK reason.\n`);
+NODE
+  printf '\n--- REPOSITORY SNAPSHOT ---\n' >> "$TMP/implement.prompt.md"
+  cat "$context" >> "$TMP/implement.prompt.md"
+}
+
+validate_change_json(){
+  local json="$1"
+  node - "$ROOT" "$json" "$MAX_CHANGE_BYTES" <<'NODE'
+const fs=require('fs'), path=require('path');
+const [root,input,maxRaw]=process.argv.slice(2);
+const max=Number(maxRaw);
+const d=JSON.parse(fs.readFileSync(input,'utf8'));
+if(d.decision!=='IMPLEMENT') {
+  console.error(`Codex returned ${d.decision}: ${d.summary}`);
+  process.exit(20);
+}
+if(!Array.isArray(d.files) || d.files.length<1 || d.files.length>18) process.exit(21);
+const protectedExact=new Set(['FINAL_SPEC.md','AGENTS.md','.codex/supervisor.md','scripts/radmehr-supervisor','.env','.env.local','.env.production']);
+const seen=new Set(); let bytes=0;
+for(const f of d.files){
+  if(!f || typeof f.path!=='string' || typeof f.content!=='string' || !['create','replace'].includes(f.operation)) process.exit(22);
+  const rel=f.path;
+  if(path.isAbsolute(rel) || rel.includes('..') || path.normalize(rel)!==rel) process.exit(23);
+  if(protectedExact.has(rel) || rel.startsWith('.git/') || rel.startsWith('.codex/') || rel.startsWith('.radmehr-agent/') || rel.startsWith('scripts/radmehr-agent')) process.exit(24);
+  if(/(^|\/)(?:\.env(?:\.|$)|.*\.(?:pem|key|p12|pfx))/.test(rel)) process.exit(25);
+  if(seen.has(rel)) process.exit(26); seen.add(rel);
+  const full=path.resolve(root,rel), prefix=path.resolve(root)+path.sep;
+  if(!full.startsWith(prefix)) process.exit(27);
+  const exists=fs.existsSync(full);
+  if(f.operation==='replace'&&!exists) process.exit(28);
+  if(f.operation==='create'&&exists) process.exit(29);
+  if(!f.content.trim()) process.exit(30);
+  bytes+=Buffer.byteLength(f.content);
+}
+if(bytes>max) process.exit(31);
+NODE
+}
+
+apply_changes(){
+  local json="$1"
+  validate_change_json "$json"
+  node - "$ROOT" "$json" <<'NODE'
+const fs=require('fs'), path=require('path');
+const [root,input]=process.argv.slice(2);
+const d=JSON.parse(fs.readFileSync(input,'utf8'));
+for(const f of d.files){
+  const full=path.resolve(root,f.path);
+  fs.mkdirSync(path.dirname(full),{recursive:true});
+  fs.writeFileSync(full,f.content);
+}
+NODE
+  git diff --check
+}
+
+implement(){
+  implementation_prompt
+  say "══ Codex: implementing selected task (text-only compatibility mode) ══"
+  codex_text_only "$TMP/implement.prompt.md" "$TMP/change.schema.json" "$TMP/implement.json" "$TMP/implement.trace.jsonl"
+  cat "$TMP/implement.json" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const x=JSON.parse(s); console.log(JSON.stringify({decision:x.decision,summary:x.summary,files:x.files.map(f=>f.path)},null,2))})'
+  apply_changes "$TMP/implement.json"
+  ok "candidate changes applied to working tree"
 }
 
 validate(){
@@ -84,7 +265,10 @@ validate(){
   (
     npm run check
     if [[ -n "${TEST_DATABASE_URL:-}" ]] && npm run | grep -qE '(^|[[:space:]])test:db($|[[:space:]])'; then
+      echo "[supervisor] TEST_DATABASE_URL present; running test:db"
       npm run test:db
+    else
+      echo "[supervisor] TEST_DATABASE_URL unavailable or test:db absent; external DB verification not run"
     fi
     git diff --check
   ) > >(tee -a "$log") 2> >(tee -a "$log" >&2)
@@ -93,69 +277,81 @@ validate(){
   return $rc
 }
 
-implementation_prompt(){
-  node - "$TMP/task.json" > "$TMP/implement.prompt.md" <<'NODE'
-const fs=require('fs');
-const t=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
-console.log(`You are the implementation engineer working inside the RadmehrAI repository.\n\nRead AGENTS.md and FINAL_SPEC.md, inspect the relevant code, then implement this supervisor-selected task:\n\nMILESTONE: ${t.milestone}\nTASK: ${t.task}\n\nACCEPTANCE CRITERIA:\n${t.acceptance.map((x,i)=>`${i+1}. ${x}`).join('\n')}\n\nRequirements:\n- Work directly in the repository.\n- Preserve unrelated functionality.\n- Use existing project conventions.\n- Add/update focused tests where appropriate.\n- Do not commit, push, deploy, or change production credentials.\n- Run useful local checks as you work.\n- Finish the implementation rather than only describing it.\n`);
-NODE
-}
-
-implement(){
-  implementation_prompt
-  say "══ Codex: implementing selected task ══"
-  codex exec \
-    --model "$MODEL" \
-    --sandbox workspace-write \
-    --ephemeral \
-    -C "$ROOT" - < "$TMP/implement.prompt.md" | tee "$TMP/implement.log"
-}
-
 review(){
   local validation_log="$1" suffix="$2"
-  cat > "$TMP/review-${suffix}.prompt.md" <<PROMPT
-Read .codex/supervisor.md, FINAL_SPEC.md, AGENTS.md, the supervisor task in $TMP/task.json, the actual current git diff, and relevant changed files/tests.
+  local context="$TMP/context-review-${suffix}.txt" diff="$TMP/diff-${suffix}.patch"
+  build_context "$context"
+  write_diff "$diff"
+  cat > "$TMP/review-${suffix}.prompt.md" <<'PROMPT'
+You are the RadmehrAI development supervisor reviewing one implementation. You MUST NOT use tools, shell, file access, web, MCP, apply_patch, or subagents. The repository snapshot, actual git diff, selected task, and validation output are supplied below.
 
-Deterministic validation output is provided below:
+FINAL_SPEC.md is the product source of truth. Review the implementation as a practical lead engineer.
 
---- VALIDATION OUTPUT ---
-$(tail -n 160 "$validation_log" 2>/dev/null || true)
---- END VALIDATION OUTPUT ---
+PASS when the selected bounded task is genuinely implemented to a useful production-quality level and local validation is acceptable.
+FIX only for a concrete code defect that can be corrected with one focused edit pass.
+STOP when a genuine user decision/access/destructive action is required, or when an external validation dependency is unavailable. Do NOT tell Codex to rewrite working code merely because TEST_DATABASE_URL or another external service is unavailable; in that case use STOP and explain the remaining verification step.
 
-Review the actual implementation as lead engineer. PASS only if the selected task and acceptance criteria are genuinely satisfied and the validation result is acceptable. FIX if there is a concrete, focused defect that Codex can repair now. STOP only if a genuine user decision/access/destructive action is required.
+Do not request guardian/orchestration/sandbox infrastructure.
 
-If FIX, make repair_task narrow and executable. Do not request new orchestration/guardian infrastructure.
+--- SELECTED TASK ---
 PROMPT
+  cat "$TMP/task.json" >> "$TMP/review-${suffix}.prompt.md"
+  printf '\n--- VALIDATION OUTPUT ---\n' >> "$TMP/review-${suffix}.prompt.md"
+  tail -n 180 "$validation_log" >> "$TMP/review-${suffix}.prompt.md" 2>/dev/null || true
+  printf '\n--- ACTUAL GIT DIFF ---\n' >> "$TMP/review-${suffix}.prompt.md"
+  cat "$diff" >> "$TMP/review-${suffix}.prompt.md"
+  printf '\n--- CURRENT REPOSITORY SNAPSHOT ---\n' >> "$TMP/review-${suffix}.prompt.md"
+  cat "$context" >> "$TMP/review-${suffix}.prompt.md"
+
   say "══ Supervisor: reviewing implementation ══"
-  run_codex read-only "$TMP/review-${suffix}.prompt.md" "$TMP/review.schema.json" "$TMP/review-${suffix}.json" "$TMP/review-${suffix}.trace.jsonl"
+  codex_text_only "$TMP/review-${suffix}.prompt.md" "$TMP/review.schema.json" "$TMP/review-${suffix}.json" "$TMP/review-${suffix}.trace.jsonl"
   cat "$TMP/review-${suffix}.json"
 }
 
 repair(){
   local review_json="$1"
+  local context="$TMP/context-repair.txt" diff="$TMP/diff-repair.patch"
+  build_context "$context"
+  write_diff "$diff"
   node - "$review_json" > "$TMP/repair.prompt.md" <<'NODE'
 const fs=require('fs');
 const r=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
-console.log(`Inspect the current RadmehrAI repository and git diff. The supervisor found this concrete defect:\n\n${r.repair_task}\n\nMake only the focused repair needed. Preserve unrelated changes. Add/update a test if it directly proves the repair. Do not commit, push, deploy, or change production credentials. Finish the repair in the working tree.`);
+console.log(`You are repairing a concrete defect in the current RadmehrAI candidate. You MUST NOT use tools, shell, file access, web, MCP, apply_patch, or subagents.\n\nSUPERVISOR REPAIR TASK:\n${r.repair_task}\n\nReturn IMPLEMENT with complete final contents only for files that need repair. Existing changed/new files may be replaced. Preserve unrelated candidate work. Do not modify FINAL_SPEC.md, AGENTS.md, .codex files, supervisor scripts, credentials, or deployment infrastructure. Return BLOCK only if the supplied context makes the repair semantically impossible.`);
 NODE
-  say "══ Codex: focused repair ══"
-  codex exec \
-    --model "$MODEL" \
-    --sandbox workspace-write \
-    --ephemeral \
-    -C "$ROOT" - < "$TMP/repair.prompt.md" | tee "$TMP/repair.log"
+  printf '\n--- CURRENT GIT DIFF ---\n' >> "$TMP/repair.prompt.md"
+  cat "$diff" >> "$TMP/repair.prompt.md"
+  printf '\n--- CURRENT REPOSITORY SNAPSHOT ---\n' >> "$TMP/repair.prompt.md"
+  cat "$context" >> "$TMP/repair.prompt.md"
+
+  say "══ Codex: focused repair (text-only compatibility mode) ══"
+  codex_text_only "$TMP/repair.prompt.md" "$TMP/change.schema.json" "$TMP/repair.json" "$TMP/repair.trace.jsonl"
+
+  # During repair, a file created in the first pass already exists. Normalize a
+  # requested create into replace for such files before validation/application.
+  node - "$ROOT" "$TMP/repair.json" <<'NODE'
+const fs=require('fs'), path=require('path');
+const [root,file]=process.argv.slice(2);
+const d=JSON.parse(fs.readFileSync(file,'utf8'));
+for(const f of d.files||[]){ if(f.operation==='create' && fs.existsSync(path.resolve(root,f.path))) f.operation='replace'; }
+fs.writeFileSync(file,JSON.stringify(d));
+NODE
+  apply_changes "$TMP/repair.json"
+  ok "focused repair applied to working tree"
 }
 
 status(){
-  echo "Radmehr Supervisor v1"
+  echo "Radmehr Supervisor v1.1"
   echo "Repository: $ROOT"
   echo "Branch: $(git branch --show-current)"
   echo "Model: $MODEL"
+  echo "Codex mode: text-only (Termux/PROot compatible)"
   echo
   git status --short
 }
 
 run(){
+  assert_clean
+  write_schemas
   plan
   local decision
   decision="$(node -e "const x=require(process.argv[1]);process.stdout.write(x.decision)" "$TMP/task.json")"
@@ -167,7 +363,7 @@ run(){
   if validate "$TMP/validation-1.log"; then
     ok "validation passed"
   else
-    say "Validation failed; supervisor will inspect the failure before deciding on one repair."
+    say "Validation failed; supervisor will inspect the concrete failure before deciding on one repair."
   fi
 
   review "$TMP/validation-1.log" "1"
@@ -189,11 +385,11 @@ run(){
   git status --short
   git diff --stat
   echo
-  if [[ "$decision" == "PASS" ]]; then
-    ok "Supervisor accepted this development task. Changes remain uncommitted for review."
-  else
-    say "Supervisor did not accept the task. Changes remain uncommitted so they can be inspected or revised."
-  fi
+  case "$decision" in
+    PASS) ok "Supervisor accepted this development task. Changes remain uncommitted for review." ;;
+    STOP) say "Supervisor stopped for a genuine user/access/verification step. Candidate changes remain uncommitted." ;;
+    *) say "Supervisor did not accept the task after the single repair allowance. Candidate changes remain uncommitted for inspection." ;;
+  esac
 }
 
 case "${1:-run}" in
