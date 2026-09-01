@@ -30,11 +30,13 @@ This contract removes ambiguity for the Phase 2 implementation. It is intentiona
 
 ## Passwords
 - Do not add a dependency solely for password hashing in Phase 2.
-- Use Node's built-in `crypto.scrypt`/`scryptSync` with a unique random salt and a versioned/parameterized stored encoding.
-- Password verification must use constant-time comparison.
+- For this phase, use Node's built-in synchronous `crypto.scryptSync` for both password hashing and verification. Do not use `promisify(crypto.scrypt)` and do not mix asynchronous and synchronous password APIs.
+- Fixed parameters for Phase 2: `N=16384`, `r=8`, `p=1`, derived key length `64` bytes, random salt length `16` bytes.
+- Stored encoding must be exactly: `scrypt$v1$N=16384,r=8,p=1$<saltHex>$<digestHex>` where `saltHex` is 32 lowercase hex characters and `digestHex` is 128 lowercase hex characters.
+- `hashPassword(password)` must: validate password bounds; generate `randomBytes(16)`; derive exactly 64 bytes using `scryptSync(password, saltBuffer, 64, { N: 16384, r: 8, p: 1 })`; and encode both salt and digest as lowercase hex in the exact format above.
+- `verifyPassword(password, encoded)` must be synchronous and return boolean. It must fail closed on malformed input. Parse exactly five `$`-separated components: `scrypt`, `v1`, parameter string, saltHex, digestHex. Require the parameter string to equal `N=16384,r=8,p=1`; require salt/digest to match the exact lowercase-hex lengths above; decode with `Buffer.from(value, 'hex')`; derive 64 bytes with the same scrypt parameters; require equal buffer lengths; then use `timingSafeEqual`.
+- The verification test is mandatory: a freshly generated hash must verify `true` for the original password, `false` for a wrong password, and `false` for malformed encodings. Two hashes of the same password must differ because of independent salts.
 - Minimum accepted password length is 12 characters. Enforce a reasonable maximum input length to avoid abuse.
-- TypeScript/Node compatibility rule: do not use `promisify(crypto.scrypt)` when passing custom scrypt options, because the promisified overload may be typed as a three-argument function. Either use `scryptSync`, or wrap callback-style `crypto.scrypt(password, salt, keylen, options, callback)` in an explicitly typed `Promise<Buffer>` helper.
-- If using the async callback wrapper, reject on the callback error and resolve with `Buffer.from(derivedKey)`; do not cast a three-argument promisified function to force a fourth options argument through TypeScript.
 
 ## Sessions
 - Session cookies are opaque cryptographically-random values; store only a SHA-256 hash in the `sessions` table.
