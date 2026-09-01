@@ -57,6 +57,9 @@ This contract removes ambiguity for the Phase 2 implementation. It is intentiona
 ## Mandatory Phase 2 validation
 - `TEST_DATABASE_URL` is mandatory for a Phase 2 acceptance run. If the safe local/test database gate cannot validate it, the run is incomplete and must not proceed to Guardian PASS.
 - The existing PostgreSQL DB suite must pass, including user defaults, identity uniqueness, last-active-SUPER_ADMIN protection, and immutable audit behavior.
+- A Phase 2 implementation is not COMPLETE if it only adds pure/unit tests for password hashing, token helpers, or session-expiry calculations. At least one generated `.test.ts` file must be a DB-backed authentication integration suite that uses `TEST_DATABASE_URL` and exercises the real PostgreSQL `users`, `sessions`, and `account_tokens` tables through the Phase 2 auth service/handlers.
+- When `TEST_DATABASE_URL` is present, the generated DB-backed auth integration tests must execute rather than skip. They must clean up only their own disposable test records or use the existing disposable DB-test isolation strategy; they must never fall back to `DATABASE_URL`.
+- The Implementer must return `BLOCK`, not `COMPLETE`, if it cannot provide DB-backed coverage for the mandatory flows within Phase 2 scope.
 - Add focused authentication tests beyond password hashing. At minimum validate:
   - successful login creates a server-side session while persisting only the session-token hash;
   - invalid user and invalid password produce the same generic login failure;
