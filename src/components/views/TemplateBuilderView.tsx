@@ -23,6 +23,7 @@ import {  Save,
   Info
 } from 'lucide-react';
 import { ApplianceTemplate, ExecutionModel, TemplateVariableMode, TemplatePromptConfig } from '../../types';
+import { compileTemplatePrompt } from '../../utils/templatePrompt';
 
 interface TemplateBuilderViewProps {
   onSaveTemplate: (template: ApplianceTemplate) => void;
@@ -232,16 +233,17 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
   const handleGenerateThumbnail = async () => {
     setIsGeneratingThumbnail(true);
     // Use the live preview prompt to resolve variables like {{OBJECT}}, etc.
-    let resolvedPrompt = basePrompt;
-    resolvedPrompt = resolvedPrompt.replace(/{{OBJECT}}/g, applianceObject);
-    resolvedPrompt = resolvedPrompt.replace(/{{TEXT_ZONE}}/g, titleOverlay);
-    resolvedPrompt = resolvedPrompt.replace(/{{ENVIRONMENT}}/g, environmentPlace);
-    resolvedPrompt = resolvedPrompt.replace(/{{PLACE}}/g, environmentPlace);
-    resolvedPrompt = resolvedPrompt.replace(/{{LIGHTING}}/g, moodLighting);
-    resolvedPrompt = resolvedPrompt.replace(/{{MOOD}}/g, moodLighting);
-    resolvedPrompt = resolvedPrompt.replace(/{{COLOR_FINISH}}/g, colorMaterial);
-    resolvedPrompt = resolvedPrompt.replace(/{{input}}/g, titleOverlay);
-    resolvedPrompt = resolvedPrompt.replace(/{{VARIABLE_NAME}}/g, titleOverlay);
+    const resolvedPrompt = compileTemplatePrompt(
+      basePrompt,
+      {
+        applianceObject,
+        titleOverlay,
+        environment: environmentPlace,
+        lighting: moodLighting,
+        colorMaterial,
+      },
+      { replaceAllLegacyVariables: true },
+    );
 
     const resultUrl = await openRouterGenerator.generateImage({
       prompt: resolvedPrompt,

@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { ApplianceTemplate, GeneratedAsset, ExecutionModel, TemplateVariableMode } from '../types';
 import { useOpenRouterImageGenerator } from '../hooks/useOpenRouterImageGenerator';
+import { compileTemplatePrompt } from '../utils/templatePrompt';
 
 
 const GeneratingConceptAnimation: React.FC = () => {
@@ -272,32 +273,17 @@ export const StudioModal: React.FC<StudioModalProps> = ({
 
   if (!isOpen || !template) return null;
 
-  const constructFinalPrompt = (): string => {
-    let p = template.basePrompt;
-
-    // Replace modular placeholders
-    p = p.replace(/\{\{OBJECT\}\}/g, customAppliance);
-    p = p.replace(/\{\{TEXT_ZONE\}\}/g, customTitle);
-    p = p.replace(/\{\{ENVIRONMENT\}\}/g, customEnvironment);
-    p = p.replace(/\{\{PLACE\}\}/g, customEnvironment);
-    p = p.replace(/\{\{LIGHTING\}\}/g, customLighting);
-    p = p.replace(/\{\{MOOD\}\}/g, customLighting);
-    p = p.replace(/\{\{COLOR_FINISH\}\}/g, template.promptConfig?.colorMaterial || template.defaultColorMaterial || 'brushed stainless steel');
-
-    // Handle legacy single-variable templates
-    if (p.includes('{{input}}')) {
-      p = p.replace(/\{\{input\}\}/g, customTitle);
-    } else if (p.includes('{{VARIABLE_NAME}}')) {
-      p = p.replace(/\{\{VARIABLE_NAME\}\}/g, customTitle);
-    }
-
-    // Fallback if no variable was replaced
-    if (!template.basePrompt.includes('{{') && customTitle) {
-      p = `${p} Display Title: "${customTitle}"`;
-    }
-
-    return p;
-  };
+  const constructFinalPrompt = (): string => compileTemplatePrompt(
+    template.basePrompt,
+    {
+      applianceObject: customAppliance,
+      titleOverlay: customTitle,
+      environment: customEnvironment,
+      lighting: customLighting,
+      colorMaterial: template.promptConfig?.colorMaterial || template.defaultColorMaterial || 'brushed stainless steel',
+    },
+    { appendTitleWhenNoVariables: true },
+  );
 
   const handleGenerate = async () => {
     if (isLimitReached) return;
