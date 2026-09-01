@@ -6,3 +6,6 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Local Radmehr agent runtime logs
+.radmehr-agent/
