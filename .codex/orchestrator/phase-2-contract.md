@@ -33,6 +33,8 @@ This contract removes ambiguity for the Phase 2 implementation. It is intentiona
 - Use Node's built-in `crypto.scrypt`/`scryptSync` with a unique random salt and a versioned/parameterized stored encoding.
 - Password verification must use constant-time comparison.
 - Minimum accepted password length is 12 characters. Enforce a reasonable maximum input length to avoid abuse.
+- TypeScript/Node compatibility rule: do not use `promisify(crypto.scrypt)` when passing custom scrypt options, because the promisified overload may be typed as a three-argument function. Either use `scryptSync`, or wrap callback-style `crypto.scrypt(password, salt, keylen, options, callback)` in an explicitly typed `Promise<Buffer>` helper.
+- If using the async callback wrapper, reject on the callback error and resolve with `Buffer.from(derivedKey)`; do not cast a three-argument promisified function to force a fourth options argument through TypeScript.
 
 ## Sessions
 - Session cookies are opaque cryptographically-random values; store only a SHA-256 hash in the `sessions` table.
