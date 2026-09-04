@@ -89,11 +89,11 @@ const interpolateRectangle = (center: [number, number, number], w: number, h: nu
 const APPLIANCE_MODELS: ApplianceModel[] = [
   {
     id: 'refrigerator',
-    name: 'Smart French-Door Refrigerator',
-    category: 'Kitchen Appliance',
+    name: 'یخچال هوشمند فرنچ‌دور',
+    category: 'لوازم آشپزخانه',
     modelEngine: 'nano-banana-2 • OpenRouter 8K',
     promptSnippet: 'Minimalist 4-door French refrigerator, tinted glass InstaView door, ice dispenser, brushed steel chassis',
-    status: 'AI Latent Synthesis: 99.4%',
+    status: 'سنتز نهفته هوش مصنوعی: 99.4%',
     colorTheme: '#38bdf8', // Cyan
     secondaryColor: '#93c5fd',
     renderPoints: (count) => {
@@ -190,11 +190,11 @@ const APPLIANCE_MODELS: ApplianceModel[] = [
   },
   {
     id: 'washer',
-    name: 'Smart Front-Load Drum Washer',
-    category: 'Laundry Care',
+    name: 'ماشین لباس‌شویی هوشمند درب‌ازجلو',
+    category: 'مراقبت از لباس',
     modelEngine: 'nano-banana-2 • OpenRouter 8K',
     promptSnippet: 'Matte obsidian front-load washer, glowing circular LED drum door, chrome bezel, touch dial',
-    status: 'AI Latent Synthesis: 98.9%',
+    status: 'سنتز نهفته هوش مصنوعی: 98.9%',
     colorTheme: '#818cf8', // Indigo
     secondaryColor: '#c7d2fe',
     renderPoints: (count) => {
@@ -279,11 +279,11 @@ const APPLIANCE_MODELS: ApplianceModel[] = [
   },
   {
     id: 'air_conditioner',
-    name: 'Smart Split Inverter AC Unit',
-    category: 'Climate & Air Quality',
+    name: 'کولر گازی اینورتر هوشمند',
+    category: 'تهویه و کیفیت هوا',
     modelEngine: 'sedance-2.5-pro • OpenRouter 8K',
     promptSnippet: 'Wall-mounted aerostream smart air conditioner, curved aerodynamic louvers, LED temperature display',
-    status: 'AI Latent Synthesis: 99.7%',
+    status: 'سنتز نهفته هوش مصنوعی: 99.7%',
     colorTheme: '#2dd4bf', // Teal
     secondaryColor: '#99f6e4',
     renderPoints: (count) => {
@@ -359,11 +359,11 @@ const APPLIANCE_MODELS: ApplianceModel[] = [
   },
   {
     id: 'espresso_machine',
-    name: 'Smart Barista Dual-Boiler Espresso Machine',
-    category: 'Beverage Precision',
+    name: 'اسپرسوساز هوشمند دو بویلر',
+    category: 'نوشیدنی حرفه‌ای',
     modelEngine: 'nano-banana-2 • OpenRouter 8K',
     promptSnippet: 'Cast-aluminum dual-boiler espresso machine, circular pressure gauges, portafilter, steam wand, cup rail',
-    status: 'AI Latent Synthesis: 99.1%',
+    status: 'سنتز نهفته هوش مصنوعی: 99.1%',
     colorTheme: '#f59e0b', // Amber/Gold
     secondaryColor: '#fde68a',
     renderPoints: (count) => {
@@ -459,11 +459,11 @@ const APPLIANCE_MODELS: ApplianceModel[] = [
   },
   {
     id: 'robot_vacuum',
-    name: 'LiDAR Smart Autonomous Robot Vacuum',
-    category: 'Automated Cleaning',
+    name: 'جاروبرقی رباتیک هوشمند LiDAR',
+    category: 'نظافت خودکار',
     modelEngine: 'sedance-2.5-pro • OpenRouter 8K',
     promptSnippet: 'Aerospace matte carbon robot vacuum, circular LiDAR laser turret, brushed gold rim bumper, camera window',
-    status: 'AI Latent Synthesis: 99.5%',
+    status: 'سنتز نهفته هوش مصنوعی: 99.5%',
     colorTheme: '#c084fc', // Purple/Violet
     secondaryColor: '#e9d5ff',
     renderPoints: (count) => {
@@ -537,11 +537,11 @@ const APPLIANCE_MODELS: ApplianceModel[] = [
   },
   {
     id: 'smart_oven',
-    name: 'Smart Built-In Convection Wall Oven',
-    category: 'Culinary Hardware',
+    name: 'فر توکار کانوکشن هوشمند',
+    category: 'تجهیزات آشپزی',
     modelEngine: 'nano-banana-2 • OpenRouter 8K',
     promptSnippet: 'Built-in seamless glass convection oven, transparent OLED door, interior glowing baking rack, touch display',
-    status: 'AI Latent Synthesis: 99.8%',
+    status: 'سنتز نهفته هوش مصنوعی: 99.8%',
     colorTheme: '#3b82f6', // Electric Blue
     secondaryColor: '#93c5fd',
     renderPoints: (count) => {
@@ -943,7 +943,7 @@ export const ApplianceParticleMorphCanvas: React.FC = () => {
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-200">
-                Latent Appliance Mesh
+                شبکه نهفته محصول
               </span>
               <span
                 className="text-[10px] font-mono px-2 py-0.5 rounded-full border transition-colors duration-500"
@@ -967,13 +967,13 @@ export const ApplianceParticleMorphCanvas: React.FC = () => {
       </div>
 
       {/* Floating 3D Geometric Nodes Counter HUD */}
-      <div className="absolute top-24 right-6 z-10 pointer-events-none hidden sm:flex flex-col items-end gap-1 text-[10px] font-mono text-slate-400">
+      <div className="absolute top-24 end-6 z-10 pointer-events-none hidden sm:flex flex-col items-end gap-1 text-[10px] font-mono text-slate-400">
         <span className="flex items-center gap-1.5 font-bold text-emerald-400">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-          1,200 STRUCTURAL NODES
+          ۱٬۲۰۰ گره ساختاری
         </span>
-        <span className="text-slate-400">PRECISION 3D WIREFRAME MESH</span>
-        <span className="text-slate-500">INTERACTIVE 360° DRAG ROTATION</span>
+        <span className="text-slate-400">شبکه سه‌بعدی دقیق</span>
+        <span className="text-slate-500">چرخش تعاملی ۳۶۰ درجه</span>
       </div>
 
       {/* Bottom HUD: Active Appliance Card & Switcher Controls */}
@@ -1003,7 +1003,7 @@ export const ApplianceParticleMorphCanvas: React.FC = () => {
                 </span>
               </div>
               <span className="text-[11px] font-mono text-slate-400 hidden sm:inline">
-                Appliance #{currentModelIndex + 1}/6
+                محصول شماره {(currentModelIndex + 1).toLocaleString('fa-IR')} از ۶
               </span>
             </div>
           </motion.div>

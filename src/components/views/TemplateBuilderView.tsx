@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useOpenRouterImageGenerator } from '../../hooks/useOpenRouterImageGenerator';
-import {  Save, 
-  Sparkles, 
-  UploadCloud, 
-  Sliders, 
-  Lock, 
-  Globe, 
-  CheckCircle2, 
-  Image as ImageIcon, 
-  Layers, 
+import {  Save,
+  Sparkles,
+  UploadCloud,
+  Sliders,
+  Lock,
+  Globe,
+  CheckCircle2,
+  Image as ImageIcon,
+  Layers,
   RefreshCw,
   Eye,
   Check,
@@ -46,29 +46,29 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
 
   // Modular scene inputs
   const [applianceObject, setApplianceObject] = useState<string>(
-    initialTemplate?.promptConfig?.applianceObject || 
-    initialTemplate?.defaultApplianceObject || 
+    initialTemplate?.promptConfig?.applianceObject ||
+    initialTemplate?.defaultApplianceObject ||
     'four-door smart refrigerator'
   );
   const [titleOverlay, setTitleOverlay] = useState<string>(
-    initialTemplate?.promptConfig?.titleOverlay || 
-    initialTemplate?.defaultTitleOverlay || 
-    initialTemplate?.defaultVariableValue || 
+    initialTemplate?.promptConfig?.titleOverlay ||
+    initialTemplate?.defaultTitleOverlay ||
+    initialTemplate?.defaultVariableValue ||
     'Smart Inverter Tech - 2026 Edition'
   );
   const [environmentPlace, setEnvironmentPlace] = useState<string>(
-    initialTemplate?.promptConfig?.environmentPlace || 
-    initialTemplate?.defaultEnvironment || 
+    initialTemplate?.promptConfig?.environmentPlace ||
+    initialTemplate?.defaultEnvironment ||
     'bright modern minimalist Scandinavian kitchen with marble island'
   );
   const [moodLighting, setMoodLighting] = useState<string>(
-    initialTemplate?.promptConfig?.moodLighting || 
-    initialTemplate?.defaultMoodLighting || 
+    initialTemplate?.promptConfig?.moodLighting ||
+    initialTemplate?.defaultMoodLighting ||
     'soft natural daylight streaming through floor-to-ceiling windows'
   );
   const [colorMaterial, setColorMaterial] = useState<string>(
-    initialTemplate?.promptConfig?.colorMaterial || 
-    initialTemplate?.defaultColorMaterial || 
+    initialTemplate?.promptConfig?.colorMaterial ||
+    initialTemplate?.defaultColorMaterial ||
     'brushed stainless steel with subtle ice-blue LED accent lines'
   );
 
@@ -88,7 +88,7 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
   );
   const [isPublic, setIsPublic] = useState<boolean>(initialTemplate?.isPublic ?? true);
   const [requireApproval, setRequireApproval] = useState<boolean>(initialTemplate?.requireApproval ?? false);
-  
+
   // Field permissions
   const [permText1, setPermText1] = useState<boolean>(initialTemplate?.fieldPermissions?.text1 ?? true);
   const [permStyleRef, setPermStyleRef] = useState<boolean>(initialTemplate?.fieldPermissions?.styleReferenceImg ?? true);
@@ -112,29 +112,29 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
         initialTemplate.description || 'Enterprise smart appliance prompt workflow with variable UI screen overlay and swappable object bindings.'
       );
       setApplianceObject(
-        initialTemplate.promptConfig?.applianceObject || 
-        initialTemplate.defaultApplianceObject || 
+        initialTemplate.promptConfig?.applianceObject ||
+        initialTemplate.defaultApplianceObject ||
         'four-door smart refrigerator'
       );
       setTitleOverlay(
-        initialTemplate.promptConfig?.titleOverlay || 
-        initialTemplate.defaultTitleOverlay || 
-        initialTemplate.defaultVariableValue || 
+        initialTemplate.promptConfig?.titleOverlay ||
+        initialTemplate.defaultTitleOverlay ||
+        initialTemplate.defaultVariableValue ||
         'Smart Inverter Tech - 2026 Edition'
       );
       setEnvironmentPlace(
-        initialTemplate.promptConfig?.environmentPlace || 
-        initialTemplate.defaultEnvironment || 
+        initialTemplate.promptConfig?.environmentPlace ||
+        initialTemplate.defaultEnvironment ||
         'bright modern minimalist Scandinavian kitchen with marble island'
       );
       setMoodLighting(
-        initialTemplate.promptConfig?.moodLighting || 
-        initialTemplate.defaultMoodLighting || 
+        initialTemplate.promptConfig?.moodLighting ||
+        initialTemplate.defaultMoodLighting ||
         'soft natural daylight streaming through floor-to-ceiling windows'
       );
       setColorMaterial(
-        initialTemplate.promptConfig?.colorMaterial || 
-        initialTemplate.defaultColorMaterial || 
+        initialTemplate.promptConfig?.colorMaterial ||
+        initialTemplate.defaultColorMaterial ||
         'brushed stainless steel with subtle ice-blue LED accent lines'
       );
       setVariableMode(initialTemplate.variableMode || 'both_object_and_title');
@@ -251,11 +251,11 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
       aspectRatio: '16:9',
       resolution: '1K',
     });
-    
+
     if (resultUrl) {
       setThumbnailUrl(resultUrl);
     } else {
-      alert('Failed to generate thumbnail. Please check your API configuration.');
+      alert('تولید تصویر بندانگشتی ناموفق بود؛ تنظیمات API را بررسی کنید.');
     }
     setIsGeneratingThumbnail(false);
   };
@@ -277,7 +277,7 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
 
   const handleSave = () => {
     if (!name.trim()) {
-      alert('Please enter a Template Name');
+      alert('لطفاً نام قالب را وارد کنید.');
       return;
     }
 
@@ -327,46 +327,46 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
   };
 
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6 animate-fade-in pb-28 md:pb-10">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6 animate-fade-in pb-28 md:pb-10">
       {/* Top Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#E0E2EC] pb-5">
         <div>
           <div className="flex items-center gap-2.5 flex-wrap">
             <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-[#191c23]">
-              {isEditingExisting ? `Edit Template` : 'Template Builder'}
+              {isEditingExisting ? `ویرایش قالب` : 'قالب‌ساز'}
             </h2>
             {isEditingExisting ? (
               <span className="text-xs px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-300/70 font-semibold flex items-center gap-1.5 shadow-xs">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse" />
-                Editing: {initialTemplate?.name}
+                در حال ویرایش: {initialTemplate?.name}
               </span>
             ) : (
               <span className="text-xs px-3 py-1 rounded-full bg-blue-50 text-[#1A73E8] border border-blue-200/60 font-medium">
-                Modular Prompt & Variable Engine
+                موتور پرامپت و متغیرهای ماژولار
               </span>
             )}
           </div>
           <p className="text-sm text-[#5F6368] mt-1">
             {isEditingExisting
-              ? `Update reference prompts, default object placeholders, lighting, and variable permissions for ${initialTemplate?.name}.`
-              : 'Configure reference appliances, environments, lighting, title overlays, and granular user customization locks.'}
+              ? `پرامپت مرجع، مقادیر پیش‌فرض، نورپردازی و مجوز متغیرهای ${initialTemplate?.name}.`
+              : 'محصول مرجع، محیط، نورپردازی، عنوان و سطح دسترسی کاربران را پیکربندی کنید.'}
           </p>
         </div>
 
         {/* Header Action Buttons */}
-        <div className="flex items-center gap-3">
+        <div className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] z-10 -mx-1 flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/95 p-2 shadow-lg backdrop-blur md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:shadow-none">
           <button
             type="button"
             onClick={onCancel}
-            className="px-5 py-2.5 rounded-full border border-[#DADCE0] bg-white text-[#414754] text-xs font-semibold hover:bg-[#F1F4F9] transition-colors cursor-pointer"
+            className="min-h-11 flex-1 px-5 py-2.5 rounded-xl md:flex-none border border-[#DADCE0] bg-white text-[#414754] text-xs font-semibold hover:bg-[#F1F4F9] transition-colors cursor-pointer"
           >
-            Cancel
+            انصراف
           </button>
           <button
             id="template-builder-save-btn"
             type="button"
             onClick={handleSave}
-            className="px-6 py-2.5 rounded-full bg-[#1A73E8] hover:bg-[#1557B0] active:scale-[0.99] text-white text-xs font-semibold shadow-xs flex items-center gap-2 transition-all cursor-pointer"
+            className="min-h-11 flex-1 justify-center px-6 py-2.5 rounded-xl md:flex-none bg-[#1A73E8] hover:bg-[#1557B0] active:scale-[0.99] text-white text-xs font-semibold shadow-xs flex items-center gap-2 transition-all cursor-pointer"
           >
             {saveSuccess ? (
               <Check className="w-4 h-4 text-white" />
@@ -376,11 +376,11 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
             <span>
               {saveSuccess
                 ? isEditingExisting
-                  ? 'Template Updated!'
-                  : 'Template Saved!'
+                  ? 'قالب به‌روزرسانی شد!'
+                  : 'قالب ذخیره شد!'
                 : isEditingExisting
-                ? 'Update Template'
-                : 'Save Template'}
+                ? 'به‌روزرسانی قالب'
+                : 'ذخیره قالب'}
             </span>
           </button>
         </div>
@@ -388,83 +388,83 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
 
       {/* Main Builder Grid: Left Primary Column + Right Settings Rail */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
+
         {/* Left Column (8 cols) */}
         <div className="lg:col-span-8 space-y-6">
-          
-          {/* Card 1: Execution Model & Basic Info */}
-          <div className="bg-white rounded-2xl p-6 border border-[#DADCE0] shadow-soft space-y-4">
+
+          {/* Card 1: مدل اجرا & Basic Info */}
+          <div className="bg-white rounded-2xl p-4 sm:p-6 border border-[#DADCE0] shadow-soft space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-bold text-[#414754] uppercase tracking-wider flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-[#1A73E8]" />
-                1. General Settings & Model
+                ۱. مشخصات قالب و مدل
               </h3>
               <span className="text-[11px] text-[#5F6368] bg-[#F1F4F9] px-2.5 py-0.5 rounded-full font-mono">
-                Engine: Multi-Modal Studio
+                موتور: استودیوی چندوجهی
               </span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-[#5F6368] mb-1.5">
-                  Template Name
+                  نام قالب
                 </label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g., Smart Kitchen: Swappable Appliance Template"
+                  placeholder="برای نمونه: آشپزخانه هوشمند با محصول قابل‌تعویض"
                   className="w-full px-4 py-2.5 bg-[#F1F4F9] border border-[#DADCE0] rounded-xl text-sm text-[#191c23] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:bg-white transition-all font-medium"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-[#5F6368] mb-1.5">
-                  Execution Model
+                  مدل اجرا
                 </label>
                 <div className="relative">
                   <select
-                    id="template-model-select"
+                    id="template-model-select" dir="ltr"
                     value={model}
                     onChange={(e) => setModel(e.target.value as ExecutionModel)}
                     className="w-full appearance-none px-4 py-2.5 bg-[#F1F4F9] border border-[#DADCE0] rounded-xl text-sm font-medium text-[#191c23] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:bg-white transition-all cursor-pointer pr-10"
                   >
-                    <option value="nano-banana-2">nano-banana-2 (Gemini Flash Image Engine)</option>
-                    <option value="sedance-2.5-pro">sedance-2.5-pro (High-Fidelity Photorealism)</option>
-                    <option value="SDXL">SDXL 1.0 (Commercial Industrial)</option>
-                    <option value="Midjourney v6">Midjourney v6 (Artisan & Barista Render)</option>
+                    <option value="nano-banana-2">nano-banana-2 (موتور تصویر Gemini Flash)</option>
+                    <option value="sedance-2.5-pro">sedance-2.5-pro (واقع‌گرایی با جزئیات بالا)</option>
+                    <option value="SDXL">SDXL 1.0 (تجاری و صنعتی)</option>
+                    <option value="Midjourney v6">Midjourney v6 (رندر حرفه‌ای محصول)</option>
                   </select>
-                  <ChevronDown className="w-4 h-4 text-[#727785] absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <ChevronDown className="w-4 h-4 text-[#727785] absolute end-4 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-[#5F6368] mb-1.5">
-                  Category
+                  دسته‌بندی
                 </label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
                   className="w-full px-4 py-2.5 bg-[#F1F4F9] border border-[#DADCE0] rounded-xl text-sm text-[#191c23] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:bg-white transition-all cursor-pointer"
                 >
-                  <option value="Smart Kitchen">Smart Kitchen</option>
-                  <option value="Laundry AI">Laundry AI</option>
-                  <option value="Climate Control">Climate Control</option>
-                  <option value="Home Automation">Home Automation</option>
-                  <option value="Kitchen Luxury">Kitchen Luxury</option>
-                  <option value="Commercial Tech">Commercial Tech</option>
+                  <option value="Smart Kitchen">آشپزخانه هوشمند</option>
+                  <option value="Laundry AI">هوش مصنوعی شست‌وشو</option>
+                  <option value="Climate Control">کنترل تهویه</option>
+                  <option value="Home Automation">اتوماسیون خانه</option>
+                  <option value="Kitchen Luxury">آشپزخانه لوکس</option>
+                  <option value="Commercial Tech">فناوری تجاری</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-[#5F6368] mb-1.5">
-                  Description Summary
+                  خلاصه توضیحات
                 </label>
                 <input
                   type="text"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Summary for catalog users..."
+                  placeholder="خلاصه‌ای برای کاربران فهرست…"
                   className="w-full px-4 py-2.5 bg-[#F1F4F9] border border-[#DADCE0] rounded-xl text-sm text-[#191c23] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:bg-white transition-all"
                 />
               </div>
@@ -472,25 +472,25 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
           </div>
 
           {/* Card 2: CORE FEATURE - Variable Customization Modes (Options 1, 2, 3) */}
-          <div className="bg-white rounded-2xl p-6 border-2 border-[#1A73E8]/30 shadow-soft space-y-4">
+          <div className="bg-white rounded-2xl p-4 sm:p-6 border-2 border-[#1A73E8]/30 shadow-soft space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
                 <h3 className="text-xs font-bold text-[#1A73E8] uppercase tracking-wider flex items-center gap-2">
                   <SlidersHorizontal className="w-4 h-4" />
-                  2. Variable Permission Mode (What Can Users Change in Studio?)
+                  ۲. سطح دسترسی متغیرها (کاربر در استودیو چه چیزهایی را می‌تواند تغییر دهد؟)
                 </h3>
                 <p className="text-xs text-[#5F6368] mt-0.5">
-                  Select which parameters the end-user can customize during image generation.
+                  مشخص کنید کاربر هنگام تولید تصویر کدام پارامترها را می‌تواند تغییر دهد.
                 </p>
               </div>
               <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-50 text-[#1A73E8] self-start sm:self-auto">
-                Required Configuration
+                پیکربندی الزامی
               </span>
             </div>
 
             {/* Mode Selection Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
-              
+
               {/* Option 1: Object Only (Appliance Swappable) */}
               <div
                 onClick={() => setVariableMode('object_only')}
@@ -512,21 +512,21 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
                     </span>
                   </div>
                   <h4 className="text-xs font-bold text-[#191c23]">
-                    1. Reference Object Only
+                    ۱. فقط محصول مرجع
                   </h4>
                   <p className="text-[11px] text-[#5F6368] mt-1 leading-relaxed">
-                    User can <strong>ONLY change/swap the appliance object</strong> (e.g. switch Refrigerator to Laundry / Washer or Espresso Maker). Title, mood, place & lighting remain <strong>LOCKED</strong>.
+                    کاربر فقط می‌تواند <strong>محصول را تغییر دهد</strong>. عنوان، حال‌وهوا، مکان و نورپردازی <strong>ثابت</strong> می‌مانند.
                   </p>
                 </div>
                 <div className="mt-3 pt-2 border-t border-gray-100 flex items-center gap-1.5 flex-wrap">
                   <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-green-100 text-green-800">
-                    Object: ✏️ Swappable
+                    محصول: ✏️ قابل‌تعویض
                   </span>
                   <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-gray-100 text-gray-600">
-                    Title: 🔒 Fixed
+                    عنوان: 🔒 ثابت
                   </span>
                   <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-gray-100 text-gray-600">
-                    Place & Lighting: 🔒 Fixed
+                    مکان و نور: 🔒 ثابت
                   </span>
                 </div>
               </div>
@@ -552,21 +552,21 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
                     </span>
                   </div>
                   <h4 className="text-xs font-bold text-[#191c23]">
-                    2. Title / Text Only
+                    ۲. فقط عنوان یا متن
                   </h4>
                   <p className="text-[11px] text-[#5F6368] mt-1 leading-relaxed">
-                    User can <strong>ONLY change the title / text overlay</strong> in the image. The reference appliance (Refrigerator), mood, place, lighting & colors remain <strong>LOCKED</strong>.
+                    کاربر فقط می‌تواند <strong>عنوان یا متن روی تصویر را تغییر دهد</strong>. محصول مرجع، حال‌وهوا، مکان، نور و رنگ‌ها <strong>ثابت</strong> می‌مانند.
                   </p>
                 </div>
                 <div className="mt-3 pt-2 border-t border-gray-100 flex items-center gap-1.5 flex-wrap">
                   <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-purple-100 text-purple-800">
-                    Title: ✏️ Editable
+                    عنوان: ✏️ قابل‌ویرایش
                   </span>
                   <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-gray-100 text-gray-600">
-                    Object: 🔒 Fixed
+                    محصول: 🔒 ثابت
                   </span>
                   <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-gray-100 text-gray-600">
-                    Place & Lighting: 🔒 Fixed
+                    مکان و نور: 🔒 ثابت
                   </span>
                 </div>
               </div>
@@ -592,21 +592,21 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
                     </span>
                   </div>
                   <h4 className="text-xs font-bold text-[#191c23]">
-                    3. Both Object & Title
+                    ۳. محصول و عنوان
                   </h4>
                   <p className="text-[11px] text-[#5F6368] mt-1 leading-relaxed">
-                    User can customize <strong>BOTH the appliance object AND title overlay</strong>. Environment place, mood, lighting & colors remain <strong>LOCKED</strong>.
+                    کاربر می‌تواند <strong>محصول و عنوان را تغییر دهد</strong>. محیط، حال‌وهوا، نور و رنگ‌ها <strong>ثابت</strong> می‌مانند.
                   </p>
                 </div>
                 <div className="mt-3 pt-2 border-t border-gray-100 flex items-center gap-1.5 flex-wrap">
                   <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-green-100 text-green-800">
-                    Object: ✏️ Swappable
+                    محصول: ✏️ قابل‌تعویض
                   </span>
                   <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-purple-100 text-purple-800">
-                    Title: ✏️ Editable
+                    عنوان: ✏️ قابل‌ویرایش
                   </span>
                   <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-gray-100 text-gray-600">
-                    Place: 🔒 Fixed
+                    مکان: 🔒 ثابت
                   </span>
                 </div>
               </div>
@@ -614,43 +614,43 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
             </div>
 
             {/* Additional Secondary Modes */}
-            <div className="flex items-center gap-4 pt-1 text-xs text-[#5F6368] border-t border-gray-100">
-              <span className="font-semibold text-[#191c23]">Other Presets:</span>
-              <label 
+            <div className="flex flex-col items-start gap-3 pt-1 text-xs sm:flex-row sm:flex-wrap sm:items-center text-[#5F6368] border-t border-gray-100">
+              <span className="font-semibold text-[#191c23]">حالت‌های دیگر:</span>
+              <label
                 onClick={() => setVariableMode('full_custom')}
                 className="flex items-center gap-1.5 cursor-pointer hover:text-[#1A73E8]"
               >
-                <input 
-                  type="radio" 
-                  name="vmode" 
-                  checked={variableMode === 'full_custom'} 
+                <input
+                  type="radio"
+                  name="vmode"
+                  checked={variableMode === 'full_custom'}
                   onChange={() => setVariableMode('full_custom')}
-                  className="text-[#1A73E8]" 
+                  className="text-[#1A73E8]"
                 />
-                <span>4. Full Customizer (Object, Title, Place, Mood & Lighting)</span>
+                <span>۴. سفارشی‌سازی کامل (محصول، عنوان، مکان، حال‌وهوا و نور)</span>
               </label>
-              <label 
+              <label
                 onClick={() => setVariableMode('locked')}
                 className="flex items-center gap-1.5 cursor-pointer hover:text-[#1A73E8]"
               >
-                <input 
-                  type="radio" 
-                  name="vmode" 
-                  checked={variableMode === 'locked'} 
+                <input
+                  type="radio"
+                  name="vmode"
+                  checked={variableMode === 'locked'}
                   onChange={() => setVariableMode('locked')}
-                  className="text-[#1A73E8]" 
+                  className="text-[#1A73E8]"
                 />
-                <span>5. Fixed Standard Preset (1-Click Output)</span>
+                <span>۵. قالب استاندارد ثابت (خروجی با یک کلیک)</span>
               </label>
             </div>
           </div>
 
           {/* Card 3: Modular Scene Parameters */}
-          <div className="bg-white rounded-2xl p-6 border border-[#DADCE0] shadow-soft space-y-5">
+          <div className="bg-white rounded-2xl p-4 sm:p-6 border border-[#DADCE0] shadow-soft space-y-5">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-bold text-[#414754] uppercase tracking-wider flex items-center gap-2">
                 <Box className="w-4 h-4 text-[#1A73E8]" />
-                3. Modular Scene & Parameter Definitions
+                ۳. تعریف صحنه و پارامترهای ماژولار
               </h3>
               <button
                 type="button"
@@ -658,18 +658,18 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
                 className="text-xs font-semibold text-[#1A73E8] hover:underline flex items-center gap-1 cursor-pointer"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
-                Sync with Base Prompt
+                همگام‌سازی با پرامپت پایه
               </button>
             </div>
 
             <div className="space-y-4">
-              
+
               {/* Parameter 1: Appliance Object */}
               <div className="p-4 rounded-xl bg-[#F8F9FD] border border-[#E0E2EC] space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-[#191c23] flex items-center gap-2">
                     <Box className="w-3.5 h-3.5 text-[#1A73E8]" />
-                    Reference Appliance / Object (Placeholder: <code className="text-[#1A73E8] font-mono">{`{{OBJECT}}`}</code>)
+                    محصول یا شیء مرجع (متغیر: <code className="text-[#1A73E8] font-mono">{`{{OBJECT}}`}</code>)
                   </label>
                   <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                     variableMode === 'object_only' || variableMode === 'both_object_and_title' || variableMode === 'full_custom'
@@ -677,20 +677,20 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
                       : 'bg-gray-200 text-gray-700'
                   }`}>
                     {variableMode === 'object_only' || variableMode === 'both_object_and_title' || variableMode === 'full_custom'
-                      ? '✏️ User Can Change'
-                      : '🔒 Fixed by Template'}
+                      ? '✏️ قابل‌تغییر توسط کاربر'
+                      : '🔒 ثابت در قالب'}
                   </span>
                 </div>
                 <input
                   type="text"
                   value={applianceObject}
                   onChange={(e) => setApplianceObject(e.target.value)}
-                  placeholder="e.g., four-door smart refrigerator, front-load washing machine, espresso maker"
+                  placeholder="برای نمونه: یخچال هوشمند چهاردر، ماشین لباس‌شویی یا اسپرسوساز"
                   className="w-full px-3.5 py-2 bg-white border border-[#DADCE0] rounded-lg text-xs sm:text-sm text-[#191c23] focus:ring-2 focus:ring-[#1A73E8] focus:outline-none"
                 />
                 {/* Quick Presets */}
                 <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                  <span className="text-[10px] text-[#5F6368]">Quick Presets:</span>
+                  <span className="text-[10px] text-[#5F6368]">گزینه‌های سریع:</span>
                   {appliancePresets.map((preset) => (
                     <button
                       key={preset}
@@ -709,7 +709,7 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-[#191c23] flex items-center gap-2">
                     <Tag className="w-3.5 h-3.5 text-purple-600" />
-                    Title / Text Overlay in Image (Placeholder: <code className="text-[#1A73E8] font-mono">{`{{TEXT_ZONE}}`}</code>)
+                    عنوان یا متن روی تصویر (متغیر: <code className="text-[#1A73E8] font-mono">{`{{TEXT_ZONE}}`}</code>)
                   </label>
                   <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                     variableMode === 'title_only' || variableMode === 'both_object_and_title' || variableMode === 'full_custom'
@@ -717,20 +717,20 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
                       : 'bg-gray-200 text-gray-700'
                   }`}>
                     {variableMode === 'title_only' || variableMode === 'both_object_and_title' || variableMode === 'full_custom'
-                      ? '✏️ User Can Change'
-                      : '🔒 Fixed by Template'}
+                      ? '✏️ قابل‌تغییر توسط کاربر'
+                      : '🔒 ثابت در قالب'}
                   </span>
                 </div>
                 <input
                   type="text"
                   value={titleOverlay}
                   onChange={(e) => setTitleOverlay(e.target.value)}
-                  placeholder="e.g., Smart Inverter Tech - 2026 Edition"
+                  placeholder="برای نمونه: فناوری اینورتر هوشمند – نسخه ۲۰۲۶"
                   className="w-full px-3.5 py-2 bg-white border border-[#DADCE0] rounded-lg text-xs sm:text-sm text-[#191c23] focus:ring-2 focus:ring-[#1A73E8] focus:outline-none"
                 />
                 {/* Quick Presets */}
                 <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                  <span className="text-[10px] text-[#5F6368]">Quick Presets:</span>
+                  <span className="text-[10px] text-[#5F6368]">گزینه‌های سریع:</span>
                   {titlePresets.map((preset) => (
                     <button
                       key={preset}
@@ -749,23 +749,23 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-[#191c23] flex items-center gap-2">
                     <Home className="w-3.5 h-3.5 text-blue-600" />
-                    Environment & Setting Place (Placeholder: <code className="text-[#1A73E8] font-mono">{`{{ENVIRONMENT}}`}</code>)
+                    محیط و محل صحنه (متغیر: <code className="text-[#1A73E8] font-mono">{`{{ENVIRONMENT}}`}</code>)
                   </label>
                   <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                     variableMode === 'full_custom' ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-700'
                   }`}>
-                    {variableMode === 'full_custom' ? '✏️ User Can Change' : '🔒 Fixed by Template'}
+                    {variableMode === 'full_custom' ? '✏️ قابل‌تغییر توسط کاربر' : '🔒 ثابت در قالب'}
                   </span>
                 </div>
                 <input
                   type="text"
                   value={environmentPlace}
                   onChange={(e) => setEnvironmentPlace(e.target.value)}
-                  placeholder="e.g., bright modern minimalist Scandinavian kitchen with marble island"
+                  placeholder="برای نمونه: آشپزخانه روشن و مدرن با جزیره مرمری"
                   className="w-full px-3.5 py-2 bg-white border border-[#DADCE0] rounded-lg text-xs sm:text-sm text-[#191c23] focus:ring-2 focus:ring-[#1A73E8] focus:outline-none"
                 />
                 <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                  <span className="text-[10px] text-[#5F6368]">Quick Presets:</span>
+                  <span className="text-[10px] text-[#5F6368]">گزینه‌های سریع:</span>
                   {placePresets.map((preset) => (
                     <button
                       key={preset}
@@ -784,23 +784,23 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-[#191c23] flex items-center gap-2">
                     <Sun className="w-3.5 h-3.5 text-amber-500" />
-                    Mood & Lighting (Placeholder: <code className="text-[#1A73E8] font-mono">{`{{LIGHTING}}`}</code>)
+                    حال‌وهوا و نورپردازی (متغیر: <code className="text-[#1A73E8] font-mono">{`{{LIGHTING}}`}</code>)
                   </label>
                   <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                     variableMode === 'full_custom' ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-700'
                   }`}>
-                    {variableMode === 'full_custom' ? '✏️ User Can Change' : '🔒 Fixed by Template'}
+                    {variableMode === 'full_custom' ? '✏️ قابل‌تغییر توسط کاربر' : '🔒 ثابت در قالب'}
                   </span>
                 </div>
                 <input
                   type="text"
                   value={moodLighting}
                   onChange={(e) => setMoodLighting(e.target.value)}
-                  placeholder="e.g., soft natural daylight streaming through floor-to-ceiling windows"
+                  placeholder="برای نمونه: نور طبیعی ملایم از پنجره‌های سرتاسری"
                   className="w-full px-3.5 py-2 bg-white border border-[#DADCE0] rounded-lg text-xs sm:text-sm text-[#191c23] focus:ring-2 focus:ring-[#1A73E8] focus:outline-none"
                 />
                 <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                  <span className="text-[10px] text-[#5F6368]">Quick Presets:</span>
+                  <span className="text-[10px] text-[#5F6368]">گزینه‌های سریع:</span>
                   {lightingPresets.map((preset) => (
                     <button
                       key={preset}
@@ -819,21 +819,21 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-[#191c23] flex items-center gap-2">
                     <Palette className="w-3.5 h-3.5 text-indigo-500" />
-                    Color Palette & Materials (Placeholder: <code className="text-[#1A73E8] font-mono">{`{{COLOR_FINISH}}`}</code>)
+                    پالت رنگ و متریال (متغیر: <code className="text-[#1A73E8] font-mono">{`{{COLOR_FINISH}}`}</code>)
                   </label>
                   <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-200 text-gray-700">
-                    🔒 Fixed by Template
+                    🔒 ثابت در قالب
                   </span>
                 </div>
                 <input
                   type="text"
                   value={colorMaterial}
                   onChange={(e) => setColorMaterial(e.target.value)}
-                  placeholder="e.g., brushed stainless steel with subtle ice-blue LED accent lines"
+                  placeholder="برای نمونه: استیل برس‌خورده با نور LED آبی یخی"
                   className="w-full px-3.5 py-2 bg-white border border-[#DADCE0] rounded-lg text-xs sm:text-sm text-[#191c23] focus:ring-2 focus:ring-[#1A73E8] focus:outline-none"
                 />
                 <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                  <span className="text-[10px] text-[#5F6368]">Quick Presets:</span>
+                  <span className="text-[10px] text-[#5F6368]">گزینه‌های سریع:</span>
                   {materialPresets.map((preset) => (
                     <button
                       key={preset}
@@ -851,16 +851,16 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
           </div>
 
           {/* Card 4: Base System Prompt & Auto-Optimizer */}
-          <div className="bg-white rounded-2xl p-6 border border-[#DADCE0] shadow-soft space-y-4">
+          <div className="bg-white rounded-2xl p-4 sm:p-6 border border-[#DADCE0] shadow-soft space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <label className="text-xs font-bold text-[#414754] uppercase tracking-wider flex items-center gap-2">
                 <Layers className="w-4 h-4 text-[#1A73E8]" />
-                4. Base System Prompt & Dynamic Variable Injection
+                ۴. پرامپت پایه و درج پویای متغیرها
               </label>
 
               {/* Insert Variables Pills */}
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[11px] font-medium text-[#5F6368]">Insert Variable:</span>
+                <span className="text-[11px] font-medium text-[#5F6368]">درج متغیر:</span>
                 {['OBJECT', 'TEXT_ZONE', 'ENVIRONMENT', 'LIGHTING', 'COLOR_FINISH'].map((v) => (
                   <button
                     key={v}
@@ -876,11 +876,12 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
 
             <div className="relative">
               <textarea
+                dir="ltr"
                 id="template-base-prompt-textarea"
                 rows={5}
                 value={basePrompt}
                 onChange={(e) => setBasePrompt(e.target.value)}
-                placeholder="Enter base instructions for this template... Use {{OBJECT}}, {{TEXT_ZONE}}, {{ENVIRONMENT}}, {{LIGHTING}} for injectible fields."
+                placeholder="دستورهای پایه این قالب را وارد کنید… برای فیلدهای قابل درج از {{OBJECT}}, {{TEXT_ZONE}}, {{ENVIRONMENT}}, {{LIGHTING}} استفاده کنید."
                 className="w-full p-4 bg-[#F1F4F9] border border-[#DADCE0] rounded-xl text-xs sm:text-sm font-mono text-[#191c23] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:bg-white transition-all leading-relaxed"
               />
 
@@ -890,7 +891,7 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
                   onClick={syncBasePromptFromModular}
                   className="text-xs font-medium text-[#1A73E8] hover:underline cursor-pointer"
                 >
-                  Regenerate from modular inputs
+                  بازسازی از ورودی‌های ماژولار
                 </button>
 
                 {/* Auto-Optimize Prompt Action Button */}
@@ -902,7 +903,7 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
                   className="px-4 py-2 rounded-full bg-gradient-to-r from-[#1A73E8] to-[#4648d4] hover:opacity-95 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer disabled:opacity-50"
                 >
                   <Sparkles className={`w-3.5 h-3.5 ${isOptimizing ? 'animate-spin' : ''}`} />
-                  <span>{isOptimizing ? 'Optimizing with Gemini...' : '✨ Auto-Optimize Prompt'}</span>
+                  <span>{isOptimizing ? 'در حال بهینه‌سازی با Gemini…' : '✨ بهینه‌سازی خودکار پرامپت'}</span>
                 </button>
               </div>
             </div>
@@ -912,30 +913,30 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-[#414754] flex items-center gap-1.5">
                   <Eye className="w-3.5 h-3.5 text-[#1A73E8]" />
-                  Live Compiled Output Preview (How AI Reads It)
+                  پیش‌نمایش خروجی نهایی (آنچه هوش مصنوعی می‌خواند)
                 </span>
-                <span className="text-[10px] text-[#5F6368] font-mono">Real-Time Sync</span>
+                <span className="text-[10px] text-[#5F6368] font-mono">همگام‌سازی لحظه‌ای</span>
               </div>
-              <p className="text-xs text-[#191c23] font-mono leading-relaxed bg-white p-3 rounded-lg border border-[#E0E2EC]/70 shadow-2xs">
+              <p dir="ltr" className="text-xs text-[#191c23] font-mono leading-relaxed bg-white p-3 rounded-lg border border-[#E0E2EC]/70 shadow-2xs">
                 {getResolvedPreviewPrompt()}
               </p>
             </div>
           </div>
 
           {/* Card 5: Reference Image Assets Dropzone */}
-          <div className="bg-white rounded-2xl p-6 border border-[#DADCE0] shadow-soft space-y-3">
+          <div className="bg-white rounded-2xl p-4 sm:p-6 border border-[#DADCE0] shadow-soft space-y-3">
             <h3 className="text-xs font-bold text-[#414754] uppercase tracking-wider flex items-center gap-2">
               <UploadCloud className="w-4 h-4 text-[#1A73E8]" />
-              5. Style Reference Image Asset (Optional)
+              ۵. تصویر مرجع سبک (اختیاری)
             </h3>
 
             <div className="border-2 border-dashed border-[#DADCE0] hover:border-[#1A73E8] rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-colors bg-[#F8F9FD]">
               <UploadCloud className="w-10 h-10 text-[#727785] mb-2" />
               <p className="text-sm font-medium text-[#191c23]">
-                Drag and drop reference appliance image here
+                تصویر مرجع محصول را اینجا بکشید و رها کنید
               </p>
               <p className="text-xs text-[#5F6368] mt-0.5">
-                PNG, JPG, or WebP up to 10MB (used as image-to-image style anchor)
+                PNG، JPG یا WebP تا ۱۰ مگابایت (مرجع سبک تصویر به تصویر)
               </p>
             </div>
           </div>
@@ -944,47 +945,47 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
 
         {/* Right Rail (4 cols) */}
         <div className="lg:col-span-4 space-y-6">
-          
+
           {/* Card: Active Mode Summary Badge */}
           <div className="bg-gradient-to-br from-[#1A73E8]/10 via-[#F8F9FD] to-white rounded-2xl p-5 border border-[#1A73E8]/20 shadow-soft space-y-3">
             <div className="flex items-center gap-2 text-xs font-bold text-[#1A73E8] uppercase tracking-wider">
               <Info className="w-4 h-4" />
-              <span>Active Variable Policy</span>
+              <span>سیاست فعال متغیرها</span>
             </div>
-            
+
             <div className="bg-white p-3 rounded-xl border border-[#DADCE0] space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-[#191c23]">Selected Mode:</span>
+                <span className="text-xs font-semibold text-[#191c23]">حالت انتخاب‌شده:</span>
                 <span className="text-xs font-mono font-bold text-[#1A73E8] bg-blue-50 px-2 py-0.5 rounded">
-                  {variableMode === 'object_only' ? '1. Object Only' : 
-                   variableMode === 'title_only' ? '2. Title Only' : 
-                   variableMode === 'both_object_and_title' ? '3. Both Object & Title' :
-                   variableMode === 'full_custom' ? '4. Full Custom' : '5. Fixed Preset'}
+                  {variableMode === 'object_only' ? '۱. فقط محصول' :
+                   variableMode === 'title_only' ? '۲. فقط عنوان' :
+                   variableMode === 'both_object_and_title' ? '۳. محصول و عنوان' :
+                   variableMode === 'full_custom' ? '۴. سفارشی کامل' : '۵. قالب ثابت'}
                 </span>
               </div>
               <p className="text-[11px] text-[#5F6368] leading-relaxed">
-                {variableMode === 'object_only' && 'Only the reference object (refrigerator, laundry, etc.) can be swapped. Mood, place & lighting remain locked.'}
-                {variableMode === 'title_only' && 'Only the title overlay text can be modified. Reference appliance, mood & colors remain locked.'}
-                {variableMode === 'both_object_and_title' && 'Both the appliance object and title overlay can be customized. Environment & lighting stay consistent.'}
-                {variableMode === 'full_custom' && 'All modular layers (Object, Title, Place, Mood & Lighting) can be customized.'}
-                {variableMode === 'locked' && 'Strict locked template for instant standardized output.'}
+                {variableMode === 'object_only' && 'فقط محصول مرجع قابل‌تعویض است؛ حال‌وهوا، مکان و نور ثابت می‌مانند.'}
+                {variableMode === 'title_only' && 'فقط متن عنوان قابل‌ویرایش است؛ محصول مرجع، حال‌وهوا و رنگ‌ها ثابت می‌مانند.'}
+                {variableMode === 'both_object_and_title' && 'محصول و عنوان قابل‌ویرایش‌اند؛ محیط و نورپردازی ثابت می‌مانند.'}
+                {variableMode === 'full_custom' && 'همه لایه‌های ماژولار قابل‌ویرایش‌اند.'}
+                {variableMode === 'locked' && 'قالب کاملاً قفل‌شده برای خروجی استاندارد فوری.'}
               </p>
             </div>
           </div>
 
-          {/* Card: Field Permissions */}
-          <div className="bg-white rounded-2xl p-6 border border-[#DADCE0] shadow-soft space-y-4">
+          {/* Card: مجوز فیلدها */}
+          <div className="bg-white rounded-2xl p-4 sm:p-6 border border-[#DADCE0] shadow-soft space-y-4">
             <h3 className="text-xs font-bold text-[#414754] uppercase tracking-wider flex items-center gap-2">
               <Lock className="w-4 h-4 text-[#1A73E8]" />
-              Field Permissions
+              مجوز فیلدها
             </h3>
 
             <div className="space-y-3.5">
               {/* Field 1: TEXT_ZONE */}
               <div className="flex items-center justify-between pb-3 border-b border-[#F0F2F8]">
                 <div>
-                  <p className="text-xs font-mono font-semibold text-[#191c23]">TEXT_ZONE (Title)</p>
-                  <p className="text-[11px] text-[#5F6368]">Text input overlay on display</p>
+                  <p className="text-xs font-mono font-semibold text-[#191c23]">TEXT_ZONE (عنوان)</p>
+                  <p className="text-[11px] text-[#5F6368]">متن عنوان روی تصویر</p>
                 </div>
                 <button
                   type="button"
@@ -995,7 +996,7 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
                 >
                   <span
                     className={`block w-4 h-4 rounded-full bg-white transition-transform ${
-                      permText1 ? 'translate-x-6' : 'translate-x-1'
+                      permText1 ? 'ltr:translate-x-6 rtl:translate-x-1' : 'ltr:translate-x-1 rtl:translate-x-6'
                     }`}
                   />
                 </button>
@@ -1005,7 +1006,7 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
               <div className="flex items-center justify-between pb-3 border-b border-[#F0F2F8]">
                 <div>
                   <p className="text-xs font-mono font-semibold text-[#191c23]">STYLE_REF_IMG</p>
-                  <p className="text-[11px] text-[#5F6368]">Appliance input image upload</p>
+                  <p className="text-[11px] text-[#5F6368]">بارگذاری تصویر ورودی محصول</p>
                 </div>
                 <button
                   type="button"
@@ -1016,7 +1017,7 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
                 >
                   <span
                     className={`block w-4 h-4 rounded-full bg-white transition-transform ${
-                      permStyleRef ? 'translate-x-6' : 'translate-x-1'
+                      permStyleRef ? 'ltr:translate-x-6 rtl:translate-x-1' : 'ltr:translate-x-1 rtl:translate-x-6'
                     }`}
                   />
                 </button>
@@ -1026,7 +1027,7 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs font-mono font-semibold text-[#191c23]">TARGET_AUDIENCE</p>
-                  <p className="text-[11px] text-[#5F6368]">Demographic dropdown</p>
+                  <p className="text-[11px] text-[#5F6368]">فهرست گروه مخاطب</p>
                 </div>
                 <button
                   type="button"
@@ -1037,7 +1038,7 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
                 >
                   <span
                     className={`block w-4 h-4 rounded-full bg-white transition-transform ${
-                      permTargetAudience ? 'translate-x-6' : 'translate-x-1'
+                      permTargetAudience ? 'ltr:translate-x-6 rtl:translate-x-1' : 'ltr:translate-x-1 rtl:translate-x-6'
                     }`}
                   />
                 </button>
@@ -1045,21 +1046,21 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
             </div>
           </div>
 
-          {/* Card: Template Thumbnail Preview */}
-          <div className="bg-white rounded-2xl p-6 border border-[#DADCE0] shadow-soft space-y-4">
+          {/* Card: تصویر بندانگشتی قالب Preview */}
+          <div className="bg-white rounded-2xl p-4 sm:p-6 border border-[#DADCE0] shadow-soft space-y-4">
             <h3 className="text-xs font-bold text-[#414754] uppercase tracking-wider flex items-center gap-2">
               <ImageIcon className="w-4 h-4 text-[#1A73E8]" />
-              Template Thumbnail
+              تصویر بندانگشتی قالب
             </h3>
 
             <div className="relative aspect-[16/10] rounded-xl overflow-hidden bg-slate-900 border border-[#DADCE0]">
               <img
                 src={thumbnailUrl}
-                alt="Thumbnail Preview"
+                alt="پیش‌نمایش تصویر بندانگشتی"
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-black/20" />
-              <div className="absolute bottom-2 left-2 bg-black/60 px-2 py-0.5 rounded text-[10px] text-white font-mono">
+              <div className="absolute bottom-2 start-2 bg-black/60 px-2 py-0.5 rounded text-[10px] text-white font-mono">
                 {model}
               </div>
             </div>
@@ -1071,21 +1072,21 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
               className="w-full py-2.5 px-4 rounded-xl border border-[#DADCE0] hover:bg-[#F1F4F9] text-[#191c23] text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isGeneratingThumbnail ? 'animate-spin' : ''}`} />
-              <span>{isGeneratingThumbnail ? 'Generating...' : 'Generate Auto-Thumbnail'}</span>
+              <span>{isGeneratingThumbnail ? 'در حال تولید…' : 'تولید خودکار تصویر بندانگشتی'}</span>
             </button>
           </div>
 
-          {/* Card: Governance & Access Settings */}
-          <div className="bg-white rounded-2xl p-6 border border-[#DADCE0] shadow-soft space-y-4">
+          {/* Card: راهبری و دسترسی Settings */}
+          <div className="bg-white rounded-2xl p-4 sm:p-6 border border-[#DADCE0] shadow-soft space-y-4">
             <h3 className="text-xs font-bold text-[#414754] uppercase tracking-wider">
-              Governance & Access
+              راهبری و دسترسی
             </h3>
 
             <div className="space-y-3.5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-semibold text-[#191c23]">Public Template</p>
-                  <p className="text-[11px] text-[#5F6368]">Available across entire workspace</p>
+                  <p className="text-xs font-semibold text-[#191c23]">قالب عمومی</p>
+                  <p className="text-[11px] text-[#5F6368]">در دسترس همه فضای کاری</p>
                 </div>
                 <button
                   type="button"
@@ -1096,7 +1097,7 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
                 >
                   <span
                     className={`block w-4 h-4 rounded-full bg-white transition-transform ${
-                      isPublic ? 'translate-x-6' : 'translate-x-1'
+                      isPublic ? 'ltr:translate-x-6 rtl:translate-x-1' : 'ltr:translate-x-1 rtl:translate-x-6'
                     }`}
                   />
                 </button>
@@ -1104,8 +1105,8 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
 
               <div className="flex items-center justify-between pt-2 border-t border-[#F0F2F8]">
                 <div>
-                  <p className="text-xs font-semibold text-[#191c23]">Require Approval</p>
-                  <p className="text-[11px] text-[#5F6368]">Generations require supervisor sign-off</p>
+                  <p className="text-xs font-semibold text-[#191c23]">نیازمند تأیید</p>
+                  <p className="text-[11px] text-[#5F6368]">تولیدها به تأیید سرپرست نیاز دارند</p>
                 </div>
                 <button
                   type="button"
@@ -1116,7 +1117,7 @@ export const TemplateBuilderView: React.FC<TemplateBuilderViewProps> = ({
                 >
                   <span
                     className={`block w-4 h-4 rounded-full bg-white transition-transform ${
-                      requireApproval ? 'translate-x-6' : 'translate-x-1'
+                      requireApproval ? 'ltr:translate-x-6 rtl:translate-x-1' : 'ltr:translate-x-1 rtl:translate-x-6'
                     }`}
                   />
                 </button>

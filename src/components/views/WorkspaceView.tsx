@@ -16,6 +16,7 @@ import {
   Check
 } from 'lucide-react';
 import { ApplianceTemplate } from '../../types';
+import { formatFaNumber, localizeCategory } from '../../utils/localization';
 
 interface WorkspaceViewProps {
   templates: ApplianceTemplate[];
@@ -28,6 +29,7 @@ interface WorkspaceViewProps {
   generationLimit?: number;
   allowUnlimited?: boolean;
   onNavigateToGovernance?: () => void;
+  isAdmin?: boolean;
 }
 
 export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
@@ -41,6 +43,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
   generationLimit = 50,
   allowUnlimited = false,
   onNavigateToGovernance,
+  isAdmin = false,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -68,20 +71,20 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
   };
 
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6 animate-fade-in pb-24 md:pb-8">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6 animate-fade-in pb-24 md:pb-8">
       {/* Top Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
             <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-[#191c23]">
-              Available Templates
+              قالب‌های آماده
             </h2>
             <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-50 text-[#1A73E8] border border-blue-200/60 font-semibold">
-              {templates.length} Active Presets
+              {formatFaNumber(templates.length)} قالب
             </span>
           </div>
           <p className="text-sm text-[#5F6368] mt-1">
-            Start building with pre-configured models, or customize reference prompts and locks as Admin.
+            یک قالب آماده را انتخاب کنید، تنظیمات آن را ببینید و تولید تصویر را آغاز کنید.
           </p>
         </div>
 
@@ -95,28 +98,28 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                 ? 'bg-red-50 border-red-200 text-red-700' 
                 : 'bg-white border-[#DADCE0] text-[#414754] hover:bg-[#F8F9FD]'
             }`}
-            title="Click to view and adjust limits in Governance"
+            title={isAdmin ? 'مدیریت سهمیه در بخش تیم و راهبری' : 'مشاهده جزئیات سهمیه در پروفایل'}
           >
-            <span className="text-[#5F6368]">Quota:</span>
+            <span className="text-[#5F6368]">سهمیه:</span>
             <span className={`font-mono font-bold ${isAtLimit ? 'text-red-600' : 'text-[#1A73E8]'}`}>
-              {allowUnlimited ? 'Unlimited' : `${completedGenerations} / ${generationLimit} Images`}
+              {allowUnlimited ? 'نامحدود' : formatFaNumber(completedGenerations) + ' از ' + formatFaNumber(generationLimit) + ' تصویر'}
             </span>
           </button>
 
           <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-[#DADCE0] shadow-xs text-xs font-medium text-[#414754]">
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <span className="font-mono text-[#191c23]">{userEmail}</span>
-            <span className="text-[#1A73E8] font-semibold">(Admin)</span>
+            <span dir="ltr" className="font-mono text-[#191c23]">{userEmail}</span>
+            <span className="text-[#1A73E8] font-semibold">{isAdmin ? '(مدیر)' : ''}</span>
           </div>
 
           <button
             id="workspace-new-template-btn"
             onClick={onCreateNewTemplate}
             className="flex items-center gap-1.5 bg-[#1A73E8] hover:bg-[#1557B0] active:scale-[0.98] text-white px-4 py-2 rounded-full text-xs font-semibold shadow-xs transition-all cursor-pointer"
-            title="Create New Template"
+            title="ساخت قالب جدید"
           >
             <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">New Template</span>
+            <span className="hidden sm:inline">قالب جدید</span>
           </button>
         </div>
       </div>
@@ -135,20 +138,20 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                   : 'bg-white text-[#5F6368] border border-[#DADCE0] hover:bg-[#F1F4F9] hover:text-[#191c23]'
               }`}
             >
-              {cat}
+              {localizeCategory(cat)}
             </button>
           ))}
         </div>
 
         {/* Search Input */}
-        <div className="relative min-w-[240px]">
-          <Search className="w-4 h-4 text-[#727785] absolute left-3 top-1/2 -translate-y-1/2" />
+        <div className="relative w-full md:w-auto md:min-w-[280px]">
+          <Search className="w-4 h-4 text-[#727785] absolute start-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search templates & models..."
+            placeholder="جست‌وجوی قالب یا مدل…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3.5 py-1.5 bg-white border border-[#DADCE0] rounded-full text-xs text-[#191c23] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] transition-all"
+            className="w-full ps-9 pe-3.5 py-1.5 bg-white border border-[#DADCE0] rounded-full text-xs text-[#191c23] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] transition-all"
           />
         </div>
       </div>
@@ -170,25 +173,25 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
               />
               
               {/* Model Tag Pill */}
-              <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-md text-white text-[11px] font-mono font-medium flex items-center gap-1 shadow-sm">
+              <div className="absolute top-3 start-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-md text-white text-[11px] font-mono font-medium flex items-center gap-1 shadow-sm">
                 <Cpu className="w-3 h-3 text-blue-300" />
                 {template.model}
               </div>
 
               {/* Admin Quick Action Floating Buttons in top-right */}
-              <div className="absolute top-3 right-3 flex items-center gap-1.5">
+              <div className="absolute top-3 end-3 flex items-center gap-1.5">
                 <div className="bg-white/90 backdrop-blur-md px-2 py-0.5 rounded-full text-[#1A73E8] text-[10px] font-semibold">
-                  {template.category}
+                  {localizeCategory(template.category)}
                 </div>
 
-                {onEditTemplate && (
+                {isAdmin && onEditTemplate && (
                   <button
                     id={`quick-edit-template-${template.id}`}
                     onClick={(e) => {
                       e.stopPropagation();
                       onEditTemplate(template);
                     }}
-                    title="Edit Saved Template (Admin)"
+                    title="ویرایش قالب ذخیره‌شده"
                     className="p-1.5 rounded-full bg-white/95 hover:bg-white text-[#191c23] hover:text-[#1A73E8] shadow-md transition-all cursor-pointer hover:scale-105"
                   >
                     <Edit3 className="w-3.5 h-3.5" />
@@ -215,27 +218,27 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                 <div className="flex items-center gap-1.5 flex-wrap">
                   {template.variableMode === 'object_only' && (
                     <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-blue-50 text-[#1A73E8] border border-blue-200/60 font-semibold flex items-center gap-1">
-                      <span>🧺 Mode 1: Object Swappable</span>
+                      <span>🧺 حالت ۱: تعویض محصول</span>
                     </span>
                   )}
                   {template.variableMode === 'title_only' && (
                     <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200/60 font-semibold flex items-center gap-1">
-                      <span>🏷️ Mode 2: Title Only</span>
+                      <span>🏷️ حالت ۲: فقط عنوان</span>
                     </span>
                   )}
                   {template.variableMode === 'both_object_and_title' && (
                     <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60 font-semibold flex items-center gap-1">
-                      <span>⚡ Mode 3: Object + Title</span>
+                      <span>⚡ حالت ۳: محصول و عنوان</span>
                     </span>
                   )}
                   {template.variableMode === 'full_custom' && (
                     <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200/60 font-semibold">
-                      🎛️ Full Customizer
+                      🎛️ سفارشی‌سازی کامل
                     </span>
                   )}
                   {template.variableMode === 'locked' && (
                     <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-700 border border-gray-200 font-semibold">
-                      🔒 Fixed Preset
+                      🔒 تنظیم ثابت
                     </span>
                   )}
                 </div>
@@ -259,31 +262,31 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                   onClick={() => onSelectTemplate(template)}
                   className="flex-1 bg-[#1A73E8] hover:bg-[#1557B0] active:scale-[0.99] text-white font-medium py-2.5 px-4 rounded-full flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer text-sm"
                 >
-                  <span>Use Template</span>
-                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                  <span>استفاده از قالب</span>
+                  <ArrowRight className="w-4 h-4 mirror-rtl transition-transform group-hover:-translate-x-1" />
                 </button>
 
-                {onEditTemplate && (
+                {isAdmin && onEditTemplate && (
                   <button
                     id={`edit-template-btn-${template.id}`}
                     onClick={(e) => {
                       e.stopPropagation();
                       onEditTemplate(template);
                     }}
-                    title="Edit Template Configuration"
+                    title="ویرایش تنظیمات قالب"
                     className="p-2.5 rounded-full border border-[#DADCE0] bg-white text-[#414754] hover:text-[#1A73E8] hover:border-[#1A73E8] hover:bg-[#F8F9FD] active:scale-[0.97] transition-all cursor-pointer flex items-center justify-center shrink-0"
                   >
                     <Edit3 className="w-4 h-4" />
                   </button>
                 )}
 
-                {onDeleteTemplate && (
+                {isAdmin && onDeleteTemplate && (
                   deleteConfirmId === template.id ? (
                     <div className="flex items-center gap-1 animate-fade-in">
                       <button
                         onClick={(e) => handleDelete(e, template.id)}
                         className="p-2.5 rounded-full bg-red-600 text-white hover:bg-red-700 transition-all cursor-pointer text-xs font-semibold"
-                        title="Confirm Delete"
+                        title="تأیید حذف"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -293,7 +296,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                           setDeleteConfirmId(null);
                         }}
                         className="p-2.5 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 transition-all cursor-pointer text-xs"
-                        title="Cancel"
+                        title="انصراف"
                       >
                         ✕
                       </button>
@@ -304,7 +307,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                         e.stopPropagation();
                         setDeleteConfirmId(template.id);
                       }}
-                      title="Delete Template"
+                      title="حذف قالب"
                       className="p-2.5 rounded-full border border-transparent hover:border-red-200 text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all cursor-pointer flex items-center justify-center shrink-0"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -316,8 +319,17 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
           </div>
         ))}
 
-        {/* "Start Blank" Card */}
-        <div
+        {filteredTemplates.length === 0 && (
+          <div className="sm:col-span-2 lg:col-span-3 rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center">
+            <Search className="mx-auto h-8 w-8 text-slate-400" />
+            <h3 className="mt-3 text-base font-semibold text-slate-900">قالبی پیدا نشد</h3>
+            <p className="mt-1 text-sm text-slate-500">عبارت یا دسته دیگری را امتحان کنید؛ یا یک قالب جدید بسازید.</p>
+            {isAdmin && <button onClick={onCreateNewTemplate} className="mt-5 min-h-11 rounded-xl bg-[#1A73E8] px-4 text-sm font-semibold text-white">ساخت قالب</button>}
+          </div>
+        )}
+
+        {/* "شروع از قالب خالی" Card */}
+        {isAdmin && <div
           id="template-card-start-blank"
           onClick={onCreateNewTemplate}
           className="border-2 border-dashed border-[#DADCE0] hover:border-[#1A73E8] bg-white/60 hover:bg-white rounded-2xl p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 min-h-[300px] group shadow-soft"
@@ -326,15 +338,15 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
             <ImageIcon className="w-8 h-8 transition-transform group-hover:scale-110" />
           </div>
           <h3 className="font-semibold text-base text-[#191c23] group-hover:text-[#1A73E8] transition-colors">
-            Start Blank
+            شروع از قالب خالی
           </h3>
           <p className="text-xs text-[#5F6368] max-w-xs mt-1.5 leading-relaxed">
-            Create an enterprise template from scratch with custom variables, prompt constraints, and supervisor permission controls.
+            یک قالب سازمانی را از ابتدا با متغیرها، محدودیت‌های پرامپت و سطح دسترسی دلخواه بسازید.
           </p>
           <span className="mt-4 text-xs font-semibold text-[#1A73E8] flex items-center gap-1">
-            <Plus className="w-3.5 h-3.5" /> Launch Builder
+            <Plus className="w-3.5 h-3.5" /> باز کردن قالب‌ساز
           </span>
-        </div>
+        </div>}
       </div>
     </div>
   );

@@ -1,16 +1,24 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Vazirmatn";
+  src: url("/fonts/Vazirmatn-Variable.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
   }
 
   body {
-    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    font-family: 'Vazirmatn', Tahoma, Arial, sans-serif;
   }
 
   code, pre, .font-mono {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Vazirmatn', ui-monospace, SFMono-Regular, Consolas, monospace;
   }
 }
 
@@ -62,4 +70,132 @@
   100% {
     width: 90%;
   }
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    min-width: 320px;
+    margin: 0;
+    background: #f7f9fc;
+    color: #191c23;
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    outline-offset: 2px;
+  }
+
+  :focus-visible {
+    outline: 2px solid #1A73E8;
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .touch-target {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.75rem;
+    color: #5f6368;
+  }
+
+  .icon-button:hover {
+    background: #f1f4f9;
+    color: #191c23;
+  }
+
+  .mobile-menu-item {
+    display: flex;
+    width: 100%;
+    min-height: 48px;
+    align-items: center;
+    gap: 0.75rem;
+    border-radius: 0.75rem;
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-align: left;
+  }
+
+  .mobile-menu-item:hover {
+    background: #f1f4f9;
+  }
+}
+
+@media (max-width: 767px) {
+  main > div {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+    padding-bottom: calc(6.5rem + env(safe-area-inset-bottom)) !important;
+  }
+
+  main button,
+  main select,
+  main input:not([type='checkbox']):not([type='radio']) {
+    min-height: 44px;
+  }
+
+  main .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-inline: contain;
+  }
+
+  main table {
+    min-width: 720px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@layer base {
+  html {
+    direction: rtl;
+  }
+
+  body {
+    line-height: 1.7;
+  }
+
+  input,
+  textarea,
+  select,
+  button {
+    font-family: inherit;
+  }
+
+  [dir='ltr'] {
+    unicode-bidi: isolate;
+  }
+}
+
+.ltr-value {
+  direction: ltr;
+  text-align: left;
+  unicode-bidi: isolate;
+}
+
+.mirror-rtl {
+  transform: scaleX(-1);
 }

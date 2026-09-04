@@ -1,1 +1,32 @@
-[]
+[
+  {
+    "id": "log-1788447143450",
+    "time": "Just now",
+    "timestamp": "2026-09-03T14:52:23.450Z",
+    "user": "farhad.abdollahi28",
+    "action": "Generated Image",
+    "type": "Generated Image",
+    "details": "Prompt: \"A sleek, luxury four-door smart refrigerator ...\" Model: nano-banana-2 (Quota: 25/50)",
+    "units": 24
+  },
+  {
+    "id": "log-1788334991034",
+    "time": "Just now",
+    "timestamp": "2026-09-02T07:43:11.034Z",
+    "user": "Farhad Abdollahi (Admin)",
+    "action": "Template Created",
+    "type": "Template Saved",
+    "details": "Created new template \"eggg\" configured with model nano-banana-2.",
+    "units": "-"
+  },
+  {
+    "id": "log-1788334934866",
+    "time": "Just now",
+    "timestamp": "2026-09-02T07:42:14.866Z",
+    "user": "farhad.abdollahi28 (Editor)",
+    "action": "User Authenticated",
+    "type": "Role Changed",
+    "details": "Session verified for farhad.abdollahi28@gmail.com (Editor in Design & Engineering). Insured SOC-2 session active.",
+    "units": "-"
+  }
+]

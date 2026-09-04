@@ -28,6 +28,7 @@ import {
 import { ApplianceTemplate, GeneratedAsset, ExecutionModel, TemplateVariableMode } from '../types';
 import { useOpenRouterImageGenerator } from '../hooks/useOpenRouterImageGenerator';
 import { compileTemplatePrompt } from '../utils/templatePrompt';
+import { localizeCategory, localizeStatus } from '../utils/localization';
 
 
 const GeneratingConceptAnimation: React.FC = () => {
@@ -139,7 +140,7 @@ const GeneratingConceptAnimation: React.FC = () => {
 
       <div className="space-y-2 flex flex-col items-center">
         <h4 className="text-2xl font-semibold text-[#191c23] flex items-center gap-2">
-          Generating your concept
+          در حال ساخت تصویر شما
           <span aria-hidden="true" className="flex space-x-1 ml-1">
             <span className="w-1.5 h-1.5 bg-[#1A73E8] rounded-full animate-pulse" style={{ animationDelay: '0s' }} />
             <span className="w-1.5 h-1.5 bg-[#1A73E8] rounded-full animate-pulse" style={{ animationDelay: '0.2s' }} />
@@ -168,6 +169,7 @@ interface StudioModalProps {
   userCompletedGenerations?: number;
   userAllowUnlimited?: boolean;
   onOpenGovernance?: () => void;
+  quotaActionLabel?: string;
 }
 
 export const StudioModal: React.FC<StudioModalProps> = ({
@@ -180,6 +182,7 @@ export const StudioModal: React.FC<StudioModalProps> = ({
   userCompletedGenerations = 24,
   userAllowUnlimited = false,
   onOpenGovernance,
+  quotaActionLabel = 'مدیریت در راهبری',
 }) => {
   // Configurable scene parameters
   const [customAppliance, setCustomAppliance] = useState<string>('four-door smart refrigerator');
@@ -215,12 +218,12 @@ export const StudioModal: React.FC<StudioModalProps> = ({
 
   // Appliance quick swap options (e.g. user swapping Refrigerator -> Laundry Machine)
   const quickApplianceSwaps = [
-    { label: '🧊 Refrigerator', value: 'four-door smart refrigerator with French glass doors' },
-    { label: '🧺 Laundry / Washer', value: 'front-load eco-cotton smart washing machine' },
-    { label: '☕ Espresso Barista', value: 'artisan stainless steel commercial espresso machine' },
-    { label: '🍳 Convection Oven', value: 'built-in black mirror glass convection wall oven' },
-    { label: '🍽️ Dishwasher', value: 'compact ultrasonic countertop dishwasher' },
-    { label: '🤖 Robot Vacuum', value: 'autonomous LiDAR smart vacuum robot' },
+    { label: '🧊 یخچال', value: 'four-door smart refrigerator with French glass doors' },
+    { label: '🧺 ماشین لباس‌شویی', value: 'front-load eco-cotton smart washing machine' },
+    { label: '☕ اسپرسوساز', value: 'artisan stainless steel commercial espresso machine' },
+    { label: '🍳 فر کانوکشن', value: 'built-in black mirror glass convection wall oven' },
+    { label: '🍽️ ماشین ظرف‌شویی', value: 'compact ultrasonic countertop dishwasher' },
+    { label: '🤖 جاروبرقی رباتیک', value: 'autonomous LiDAR smart vacuum robot' },
   ];
 
   // Quick title presets
@@ -365,18 +368,18 @@ export const StudioModal: React.FC<StudioModalProps> = ({
             </div>
             <div className="min-w-0">
               <h3 id="studio-modal-title" className="text-sm sm:text-base font-semibold text-[#191c23] flex items-center gap-2 truncate">
-                <span className="truncate">Generate asset</span>
+                <span className="truncate">تولید تصویر</span>
                 <span className="hidden sm:inline text-xs px-2.5 py-0.5 rounded-full bg-blue-100/80 text-[#1A73E8] font-medium">
-                  {template.category}
+                  {localizeCategory(template.category)}
                 </span>
               </h3>
               <div className="flex items-center gap-2 mt-0.5 min-w-0">
                 <p className="text-xs text-[#5F6368] truncate">{template.name}</p>
                 <span className="hidden sm:inline text-[10px] font-mono px-2 py-0.5 rounded bg-blue-50 text-[#1A73E8] border border-blue-200/50">
-                  {variableMode === 'object_only' ? 'Mode: 1. Object Swappable' :
-                   variableMode === 'title_only' ? 'Mode: 2. Title Only' :
-                   variableMode === 'both_object_and_title' ? 'Mode: 3. Both Object & Title' :
-                   variableMode === 'full_custom' ? 'Mode: 4. Full Custom' : 'Mode: 5. Fixed Preset'}
+                  {variableMode === 'object_only' ? 'حالت ۱: محصول قابل‌تعویض' :
+                   variableMode === 'title_only' ? 'حالت ۲: فقط عنوان' :
+                   variableMode === 'both_object_and_title' ? 'حالت ۳: محصول و عنوان' :
+                   variableMode === 'full_custom' ? 'حالت ۴: سفارشی کامل' : 'حالت ۵: قالب ثابت'}
                 </span>
               </div>
             </div>
@@ -386,9 +389,9 @@ export const StudioModal: React.FC<StudioModalProps> = ({
             {/* User Quota Status */}
             <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-[#DADCE0] text-xs font-medium">
               <Gauge className="w-3.5 h-3.5 text-[#1A73E8]" />
-              <span className="text-[#5F6368]">Limit:</span>
+              <span className="text-[#5F6368]">سقف:</span>
               <span className={`font-mono font-bold ${isLimitReached ? 'text-red-600' : 'text-[#191c23]'}`}>
-                {userAllowUnlimited ? 'Unlimited' : `${userCompletedGenerations} / ${userGenerationLimit}`}
+                {userAllowUnlimited ? 'نامحدود' : `${userCompletedGenerations} / ${userGenerationLimit}`}
               </span>
             </div>
 
@@ -401,10 +404,10 @@ export const StudioModal: React.FC<StudioModalProps> = ({
                   onEditTemplate(template);
                 }}
                 className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#DADCE0] bg-white text-[#414754] hover:text-[#1A73E8] hover:border-[#1A73E8] hover:bg-[#F8F9FD] text-xs font-semibold shadow-xs transition-all cursor-pointer"
-                title="Edit this template in Builder"
+                title="ویرایش این قالب در قالب‌ساز"
               >
                 <Edit3 className="w-3.5 h-3.5" />
-                <span>Edit Template</span>
+                <span>ویرایش قالب</span>
               </button>
             )}
 
@@ -413,8 +416,8 @@ export const StudioModal: React.FC<StudioModalProps> = ({
                 cancelPolling();
                 onClose();
               }}
-              className="p-2.5 -mr-1 rounded-full text-[#414754] hover:bg-[#E0E2EC] transition-colors cursor-pointer shrink-0"
-              aria-label="Close modal"
+              className="p-2.5 -me-1 rounded-full text-[#414754] hover:bg-[#E0E2EC] transition-colors cursor-pointer shrink-0"
+              aria-label="بستن استودیو"
             >
               <X className="w-5 h-5" />
             </button>
@@ -427,11 +430,11 @@ export const StudioModal: React.FC<StudioModalProps> = ({
           {!hasGenerationStarted && (
             <div className="sm:hidden flex items-center justify-between gap-3 rounded-2xl bg-blue-50 border border-blue-100 px-3.5 py-2.5">
               <div className="min-w-0">
-                <p className="text-[10px] uppercase tracking-wider font-bold text-[#1A73E8]">Ready to customize</p>
-                <p className="text-xs text-[#414754] truncate mt-0.5">Choose an object, title and format below.</p>
+                <p className="text-[10px] uppercase tracking-wider font-bold text-[#1A73E8]">آماده سفارشی‌سازی</p>
+                <p className="text-xs text-[#414754] truncate mt-0.5">محصول، عنوان و قالب تصویر را انتخاب کنید.</p>
               </div>
               <span className="shrink-0 text-[11px] font-mono font-bold text-[#1A73E8] bg-white rounded-full px-2.5 py-1 border border-blue-100">
-                {userAllowUnlimited ? 'Unlimited' : `${remainingGenerations} left`}
+                {userAllowUnlimited ? 'نامحدود' : `${remainingGenerations} باقی‌مانده`}
               </span>
             </div>
           )}
@@ -445,10 +448,10 @@ export const StudioModal: React.FC<StudioModalProps> = ({
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-red-900">
-                    AI Generation Limit Reached ({userCompletedGenerations} / {userGenerationLimit})
+                    سقف تولید تصویر تکمیل شده است ({userCompletedGenerations} / {userGenerationLimit})
                   </h4>
                   <p className="text-xs text-red-700 mt-0.5">
-                    You have reached your allocated maximum of {userGenerationLimit} completed AI image generations.
+                    شما به سقف اختصاص‌یافته {userGenerationLimit} تولید تصویر رسیده‌اید.
                   </p>
                 </div>
               </div>
@@ -460,10 +463,10 @@ export const StudioModal: React.FC<StudioModalProps> = ({
                     onClose();
                     onOpenGovernance();
                   }}
-                  className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1 shrink-0 transition-colors shadow-2xs cursor-pointer"
+                  className="min-h-11 px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1 shrink-0 transition-colors shadow-2xs cursor-pointer"
                 >
-                  <span>Manage in Governance</span>
-                  <ArrowRight className="w-3 h-3" />
+                  <span>{quotaActionLabel}</span>
+                  <ArrowRight className="w-3 h-3 mirror-rtl" />
                 </button>
               )}
             </div>
@@ -471,29 +474,30 @@ export const StudioModal: React.FC<StudioModalProps> = ({
 
           {!hasGenerationStarted ? (
             <>
-          {/* Model & Aspect Ratio Row */}
+          {/* Model & نسبت تصویر Row */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
                             <label className="block text-xs font-semibold text-[#414754] uppercase tracking-wider mb-1.5">
-                              Execution Model
+                              مدل اجرا
                             </label>
                             <select
+                              dir="ltr"
                               value={selectedModel}
                               onChange={(e) => setSelectedModel(e.target.value as ExecutionModel)}
                               disabled={loading || isLimitReached}
                               className="w-full px-3.5 py-2.5 bg-[#F1F4F9] border border-[#DADCE0] rounded-xl text-sm font-medium text-[#191c23] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:bg-white transition-all cursor-pointer disabled:opacity-50"
                             >
                               <option value="nano-banana-2">nano-banana-2 (Gemini Flash Image)</option>
-                              <option value="seedream/5-pro-image-to-image">Seedream 5.0 Pro (Image to Image)</option>
-                              <option value="sedance-2.5-pro">sedance-2.5-pro (High Res Appliance)</option>
-                              <option value="SDXL">SDXL 1.0 (Commercial Industrial)</option>
-                              <option value="Midjourney v6">Midjourney v6 (Photorealistic Studio)</option>
+                              <option value="seedream/5-pro-image-to-image">Seedream 5.0 Pro (تصویر به تصویر)</option>
+                              <option value="sedance-2.5-pro">sedance-2.5-pro (محصول با وضوح بالا)</option>
+                              <option value="SDXL">SDXL 1.0 (تجاری و صنعتی)</option>
+                              <option value="Midjourney v6">Midjourney v6 (استودیوی واقع‌گرایانه)</option>
                             </select>
                           </div>
 
                           <div>
                             <label className="block text-xs font-semibold text-[#414754] uppercase tracking-wider mb-1.5">
-                              Aspect Ratio
+                              نسبت تصویر
                             </label>
                             <div className="grid grid-cols-3 gap-2">
                               {['16:9', '1:1', '4:3'].map((ratio) => (
@@ -508,7 +512,7 @@ export const StudioModal: React.FC<StudioModalProps> = ({
                                       : 'bg-[#F1F4F9] border-[#DADCE0] text-[#5F6368] hover:bg-white'
                                   } disabled:opacity-50`}
                                 >
-                                  <span className="block">{ratio}</span><span className="hidden sm:inline"> {ratio === '16:9' ? '(Landscape)' : ratio === '1:1' ? '(Square)' : '(Standard)'}</span>
+                                  <span className="block">{ratio}</span><span className="hidden sm:inline"> {ratio === '16:9' ? '(افقی)' : ratio === '1:1' ? '(مربع)' : '(استاندارد)'}</span>
                                 </button>
                               ))}
                             </div>
@@ -524,7 +528,7 @@ export const StudioModal: React.FC<StudioModalProps> = ({
                           <div className="flex items-start sm:items-center justify-between gap-2 mb-2">
                             <label className="text-xs font-bold text-[#191c23] flex items-center gap-2 min-w-0">
                               <Box className={`w-4 h-4 ${canChangeObject ? 'text-[#1A73E8]' : 'text-gray-500'}`} />
-                              Reference Appliance Object
+                              محصول مرجع
                               <code className="hidden sm:inline text-[11px] font-mono text-[#1A73E8] bg-blue-50 px-1.5 py-0.5 rounded">{`{{OBJECT}}`}</code>
                             </label>
                             <span className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1 ${
@@ -533,8 +537,8 @@ export const StudioModal: React.FC<StudioModalProps> = ({
                                 : 'bg-gray-200 text-gray-700'
                             }`}>
                               {canChangeObject ? <CheckCircle2 className="w-3 h-3 text-green-600" /> : <Lock className="w-3 h-3 text-gray-500" />}
-                              <span className="hidden sm:inline">{canChangeObject ? 'Editable in this Template' : 'Fixed by Template (Locked)'}</span>
-                              <span className="sm:hidden">{canChangeObject ? 'Editable' : 'Locked'}</span>
+                              <span className="hidden sm:inline">{canChangeObject ? 'قابل‌ویرایش در این قالب' : 'ثابت در قالب'}</span>
+                              <span className="sm:hidden">{canChangeObject ? 'قابل‌ویرایش' : 'قفل‌شده'}</span>
                             </span>
                           </div>
 
@@ -544,14 +548,14 @@ export const StudioModal: React.FC<StudioModalProps> = ({
                                 type="text"
                                 value={customAppliance}
                                 onChange={(e) => setCustomAppliance(e.target.value)}
-                                placeholder="e.g. four-door smart refrigerator, washing machine, espresso maker..."
+                                placeholder="برای نمونه: یخچال هوشمند چهاردر، ماشین لباس‌شویی یا اسپرسوساز…"
                                 disabled={loading || isLimitReached}
                                 className="w-full px-3.5 py-2.5 bg-[#F1F4F9] border border-[#DADCE0] rounded-xl text-sm font-medium text-[#191c23] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:bg-white transition-all shadow-inner disabled:opacity-50"
                               />
 
                               {/* Quick Appliance Swaps */}
                               <div className="space-y-1">
-                                <span className="text-[11px] font-medium text-[#5F6368]">Quick Appliance Swaps:</span>
+                                <span className="text-[11px] font-medium text-[#5F6368]">تعویض سریع محصول:</span>
                                 <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1 snap-x">
                                   {quickApplianceSwaps.map((item) => (
                                     <button
@@ -574,7 +578,7 @@ export const StudioModal: React.FC<StudioModalProps> = ({
                           ) : (
                             <div className="p-3 bg-white rounded-xl border border-[#DADCE0] flex items-center justify-between text-xs">
                               <span className="font-mono text-[#191c23] font-medium">{customAppliance}</span>
-                              <span className="text-[11px] text-[#727785] italic">Appliance object is locked by creator</span>
+                              <span className="text-[11px] text-[#727785] italic">محصول توسط سازنده قالب قفل شده است</span>
                             </div>
                           )}
                         </div>
@@ -588,7 +592,7 @@ export const StudioModal: React.FC<StudioModalProps> = ({
                           <div className="flex items-start sm:items-center justify-between gap-2 mb-2">
                             <label className="text-xs font-bold text-[#191c23] flex items-center gap-2 min-w-0">
                               <Tag className={`w-4 h-4 ${canChangeTitle ? 'text-purple-600' : 'text-gray-500'}`} />
-                              Title / Text Overlay in Image
+                              عنوان یا متن روی تصویر
                               <code className="hidden sm:inline text-[11px] font-mono text-[#1A73E8] bg-blue-50 px-1.5 py-0.5 rounded">{`{{TEXT_ZONE}}`}</code>
                             </label>
                             <span className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1 ${
@@ -597,8 +601,8 @@ export const StudioModal: React.FC<StudioModalProps> = ({
                                 : 'bg-gray-200 text-gray-700'
                             }`}>
                               {canChangeTitle ? <CheckCircle2 className="w-3 h-3 text-purple-600" /> : <Lock className="w-3 h-3 text-gray-500" />}
-                              <span className="hidden sm:inline">{canChangeTitle ? 'Editable in this Template' : 'Fixed by Template (Locked)'}</span>
-                              <span className="sm:hidden">{canChangeTitle ? 'Editable' : 'Locked'}</span>
+                              <span className="hidden sm:inline">{canChangeTitle ? 'قابل‌ویرایش در این قالب' : 'ثابت در قالب'}</span>
+                              <span className="sm:hidden">{canChangeTitle ? 'قابل‌ویرایش' : 'قفل‌شده'}</span>
                             </span>
                           </div>
 
@@ -608,14 +612,14 @@ export const StudioModal: React.FC<StudioModalProps> = ({
                                 type="text"
                                 value={customTitle}
                                 onChange={(e) => setCustomTitle(e.target.value)}
-                                placeholder="e.g. Smart Inverter Tech - 2026 Edition"
+                                placeholder="برای نمونه: فناوری اینورتر هوشمند – نسخه ۲۰۲۶"
                                 disabled={loading || isLimitReached}
                                 className="w-full px-3.5 py-2.5 bg-[#F1F4F9] border border-[#DADCE0] rounded-xl text-sm font-medium text-[#191c23] focus:outline-none focus:ring-2 focus:ring-purple-600 focus:bg-white transition-all shadow-inner disabled:opacity-50"
                               />
 
                               {/* Quick Title Presets */}
                               <div className="space-y-1">
-                                <span className="text-[11px] font-medium text-[#5F6368]">Suggested Titles:</span>
+                                <span className="text-[11px] font-medium text-[#5F6368]">عنوان‌های پیشنهادی:</span>
                                 <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1 snap-x">
                                   {quickTitleOptions.map((title) => (
                                     <button
@@ -638,7 +642,7 @@ export const StudioModal: React.FC<StudioModalProps> = ({
                           ) : (
                             <div className="p-3 bg-white rounded-xl border border-[#DADCE0] flex items-center justify-between text-xs">
                               <span className="font-mono text-[#191c23] font-medium">{customTitle}</span>
-                              <span className="text-[11px] text-[#727785] italic">Title text is locked by creator</span>
+                              <span className="text-[11px] text-[#727785] italic">متن عنوان توسط سازنده قالب قفل شده است</span>
                             </div>
                           )}
                         </div>
@@ -648,18 +652,18 @@ export const StudioModal: React.FC<StudioModalProps> = ({
                           <div className="flex items-center justify-between">
                             <span className="text-xs font-bold text-[#414754] uppercase tracking-wider flex items-center gap-1.5">
                               <Home className="w-3.5 h-3.5 text-blue-600" />
-                              Environment & Lighting Scene Anchors
+                              محیط و نورپردازی صحنه
                             </span>
                             <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-200 text-gray-700 flex items-center gap-1">
                               <Lock className="w-3 h-3 text-gray-500" />
-                              {canChangeEnvironment ? 'Customizable' : 'Fixed by Template'}
+                              {canChangeEnvironment ? 'قابل‌سفارشی‌سازی' : 'ثابت در قالب'}
                             </span>
                           </div>
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                             <div className="p-3 bg-white rounded-xl border border-[#DADCE0]">
                               <span className="text-[10px] font-bold text-[#5F6368] uppercase flex items-center gap-1 mb-1">
-                                <Home className="w-3 h-3 text-blue-500" /> Place Setting
+                                <Home className="w-3 h-3 text-blue-500" /> محل صحنه
                               </span>
                               <p className="font-mono text-[#191c23] leading-relaxed">
                                 {customEnvironment}
@@ -668,7 +672,7 @@ export const StudioModal: React.FC<StudioModalProps> = ({
 
                             <div className="p-3 bg-white rounded-xl border border-[#DADCE0]">
                               <span className="text-[10px] font-bold text-[#5F6368] uppercase flex items-center gap-1 mb-1">
-                                <Sun className="w-3 h-3 text-amber-500" /> Mood & Lighting
+                                <Sun className="w-3 h-3 text-amber-500" /> حال‌وهوا و نورپردازی
                               </span>
                               <p className="font-mono text-[#191c23] leading-relaxed">
                                 {customLighting}
@@ -682,7 +686,7 @@ export const StudioModal: React.FC<StudioModalProps> = ({
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-xs font-semibold text-[#5F6368] flex items-center gap-1.5">
                               <Layers className="w-3.5 h-3.5 text-[#1A73E8]" />
-                              Compiled Prompt Payload (Dynamic Engine)
+                              پرامپت نهایی (موتور پویا)
                             </span>
                             <button
                               type="button"
@@ -690,10 +694,10 @@ export const StudioModal: React.FC<StudioModalProps> = ({
                               className="text-xs text-[#1A73E8] hover:underline flex items-center gap-1 font-medium cursor-pointer"
                             >
                               {copiedPrompt ? <Check className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
-                              {copiedPrompt ? 'Copied' : 'Copy Prompt'}
+                              {copiedPrompt ? 'کپی شد' : 'کپی پرامپت'}
                             </button>
                           </div>
-                          <p className="text-xs text-[#414754] font-mono leading-relaxed line-clamp-3 bg-white p-2.5 rounded-lg border border-[#E0E2EC]/70">
+                          <p dir="ltr" className="text-xs text-[#414754] font-mono leading-relaxed line-clamp-3 bg-white p-2.5 rounded-lg border border-[#E0E2EC]/70">
                             {constructFinalPrompt()}
                           </p>
                         </div>
@@ -714,18 +718,18 @@ export const StudioModal: React.FC<StudioModalProps> = ({
                               <>
                                 <RefreshCw className="w-4 h-4 animate-spin text-white" />
                                 <span>
-                                  Generating Visual... ({status || 'PROCESSING'}) • Polling every 5s ({elapsedSeconds}s)
+                                  در حال تولید تصویر… ({localizeStatus(status || 'PROCESSING')}) • بررسی هر ۵ ثانیه ({elapsedSeconds}s)
                                 </span>
                               </>
                             ) : isLimitReached ? (
                               <>
                                 <Lock className="w-4 h-4 text-gray-500" />
-                                <span>Generation Limit Exhausted ({userCompletedGenerations}/{userGenerationLimit})</span>
+                                <span>سهمیه تولید پایان یافته است ({userCompletedGenerations}/{userGenerationLimit})</span>
                               </>
                             ) : (
                               <>
                                 <Sparkles className="w-4 h-4 text-white" />
-                                <span>Create Visual ({remainingGenerations} Remaining in Quota)</span>
+                                <span>تولید تصویر ({remainingGenerations} سهمیه باقی‌مانده)</span>
                               </>
                             )}
                           </button>
@@ -734,7 +738,7 @@ export const StudioModal: React.FC<StudioModalProps> = ({
                             <div className="mt-3 flex items-center justify-between text-xs text-[#5F6368] bg-[#E8F0FE]/60 px-4 py-2.5 rounded-xl border border-blue-100 animate-pulse">
                               <div className="flex items-center gap-2">
                                 <div className="w-2 h-2 rounded-full bg-[#1A73E8] animate-ping" />
-                                <span>Task ID: <span className="font-mono">{taskId || 'Establishing connection...'}</span></span>
+                                <span>شناسه کار: <span className="font-mono">{taskId || 'در حال برقراری اتصال…'}</span></span>
                               </div>
                               <button
                                 type="button"
@@ -744,7 +748,7 @@ export const StudioModal: React.FC<StudioModalProps> = ({
                                 }}
                                 className="text-[#ba1a1a] hover:underline font-medium cursor-pointer"
                               >
-                                Cancel Polling
+                                توقف بررسی
                               </button>
                             </div>
                           )}
@@ -790,22 +794,22 @@ export const StudioModal: React.FC<StudioModalProps> = ({
                   <div className="min-w-0 flex-1">
                     <h4 className="text-sm font-bold text-[#191c23]">
                       {resultImageUrl
-                        ? 'Your generated image is ready'
+                        ? 'تصویر تولیدشده آماده است'
                         : error
-                          ? 'Generation needs attention'
-                          : 'Generating your image'}
+                          ? 'تولید تصویر نیازمند بررسی است'
+                          : 'در حال تولید تصویر'}
                     </h4>
                     <p className="mt-1 text-xs leading-relaxed text-[#5F6368]">
                       {resultImageUrl
-                        ? 'Preview the final result below, download it, save it, or re-run the same template.'
+                        ? 'نتیجه نهایی را ببینید، دانلود یا ذخیره کنید، یا همین قالب را دوباره اجرا کنید.'
                         : error
                           ? error
-                          : 'Please keep this popup open while we process the template. The setup inputs are hidden during generation so the focus stays on status and the final result.'}
+                          : 'تا پایان پردازش، این پنجره را باز نگه دارید. ورودی‌ها هنگام تولید پنهان می‌شوند تا وضعیت و نتیجه نهایی واضح بمانند.'}
                     </p>
                     <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-[#414754]">
-                      <span className="px-2.5 py-1 rounded-full bg-white/80 border border-white font-mono">Status: {status || (loading ? 'PROCESSING' : 'PENDING')}</span>
-                      <span className="px-2.5 py-1 rounded-full bg-white/80 border border-white font-mono">Elapsed: {elapsedSeconds}s</span>
-                      <span className="px-2.5 py-1 rounded-full bg-white/80 border border-white font-mono truncate max-w-full">Task: {taskId || 'Starting...'}</span>
+                      <span className="px-2.5 py-1 rounded-full bg-white/80 border border-white font-mono">وضعیت: {localizeStatus(status || (loading ? 'PROCESSING' : 'PENDING'))}</span>
+                      <span className="px-2.5 py-1 rounded-full bg-white/80 border border-white font-mono">زمان سپری‌شده: {elapsedSeconds}s</span>
+                      <span className="px-2.5 py-1 rounded-full bg-white/80 border border-white font-mono truncate max-w-full">کار: {taskId || 'در حال شروع…'}</span>
                     </div>
                   </div>
                 </div>
@@ -815,7 +819,7 @@ export const StudioModal: React.FC<StudioModalProps> = ({
                 <div className="flex items-center justify-between text-xs text-[#5F6368] bg-white px-4 py-2.5 rounded-xl border border-[#DADCE0] animate-pulse">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-[#1A73E8] animate-ping" />
-                    <span>Polling every 3.5s for the finished image.</span>
+                    <span>در حال بررسی نتیجه نهایی هر ۳٫۵ ثانیه.</span>
                   </div>
                   <button
                     type="button"
@@ -825,7 +829,7 @@ export const StudioModal: React.FC<StudioModalProps> = ({
                     }}
                     className="text-[#ba1a1a] hover:underline font-medium cursor-pointer"
                   >
-                    Cancel
+                    انصراف
                   </button>
                 </div>
               )}
@@ -835,17 +839,17 @@ export const StudioModal: React.FC<StudioModalProps> = ({
                   <button
                     type="button"
                     onClick={handleGenerate}
-                    className="flex-1 bg-[#1A73E8] hover:bg-[#1557B0] text-white py-2.5 px-4 rounded-xl text-xs font-medium flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                    className="flex-1 min-h-11 bg-[#1A73E8] hover:bg-[#1557B0] text-white py-2.5 px-4 rounded-xl text-xs font-medium flex items-center justify-center gap-2 transition-colors cursor-pointer"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
-                    Try Again
+                    تلاش دوباره
                   </button>
                   <button
                     type="button"
                     onClick={() => setHasGenerationStarted(false)}
                     className="flex-1 bg-[#F1F4F9] hover:bg-[#E0E2EC] text-[#414754] py-2.5 px-4 rounded-xl text-xs font-medium transition-colors cursor-pointer"
                   >
-                    Edit Inputs
+                    ویرایش ورودی‌ها
                   </button>
                 </div>
               )}
@@ -854,13 +858,13 @@ export const StudioModal: React.FC<StudioModalProps> = ({
           {/* Generated Visual Result Display */}
           {resultImageUrl && (
             <div className="mt-4 pt-4 border-t border-[#E0E2EC] space-y-3 animate-fade-in">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col items-start justify-between gap-1 sm:flex-row sm:items-center">
                 <span className="text-sm font-semibold text-[#191c23] flex items-center gap-1.5">
                   <Check className="w-4 h-4 text-green-600" />
-                  Visual Generated Successfully (Quota: {userCompletedGenerations + 1}/{userGenerationLimit})
+                  تصویر با موفقیت تولید شد (سهمیه: {userCompletedGenerations + 1}/{userGenerationLimit})
                 </span>
                 <span className="text-xs text-[#5F6368] flex items-center gap-1">
-                  <Clock className="w-3 h-3" /> Ready in {elapsedSeconds || 5}s
+                  <Clock className="w-3 h-3" /> آماده در {elapsedSeconds || 5}s
                 </span>
               </div>
 
@@ -868,28 +872,28 @@ export const StudioModal: React.FC<StudioModalProps> = ({
               <div className="relative rounded-2xl overflow-hidden border border-[#DADCE0] bg-black group shadow-sm aspect-video flex items-center justify-center">
                 <img
                   src={resultImageUrl}
-                  alt="Generated Appliance"
+                  alt="محصول تولیدشده"
                   className="w-full h-full object-cover"
                 />
 
                 {/* Model tag watermark */}
-                <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-md px-3 py-1 rounded-full text-white text-xs font-mono font-medium">
+                <div className="absolute top-3 باقی‌مانده-3 bg-black/70 backdrop-blur-md px-3 py-1 rounded-full text-white text-xs font-mono font-medium">
                   {selectedModel}
                 </div>
 
                 {/* Quick actions overlay */}
-                <div className="absolute bottom-3 right-3 flex items-center gap-2">
+                <div className="absolute bottom-3 end-3 flex items-center gap-2">
                   <button
                     onClick={handleDownload}
                     className="p-2 bg-white/90 hover:bg-white text-[#191c23] rounded-full shadow-md backdrop-blur-sm transition-all cursor-pointer"
-                    title="Download PNG"
+                    title="دانلود PNG"
                   >
                     <Download className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => setSavedToLibrary(true)}
                     className="p-2 bg-white/90 hover:bg-white text-[#1A73E8] rounded-full shadow-md backdrop-blur-sm transition-all cursor-pointer"
-                    title="Saved to Library"
+                    title="ذخیره در کتابخانه"
                   >
                     {savedToLibrary ? <Check className="w-4 h-4 text-green-600" /> : <Bookmark className="w-4 h-4" />}
                   </button>
@@ -903,7 +907,7 @@ export const StudioModal: React.FC<StudioModalProps> = ({
                   className="flex-1 bg-[#191c23] hover:bg-[#2d3038] text-white py-2.5 px-4 rounded-xl text-xs font-medium flex items-center justify-center gap-2 transition-colors cursor-pointer"
                 >
                   <Download className="w-4 h-4" />
-                  Download High-Res Asset
+                  دانلود تصویر باکیفیت
                 </button>
                 <button
                   onClick={() => {
@@ -914,7 +918,7 @@ export const StudioModal: React.FC<StudioModalProps> = ({
                   className="px-4 py-2.5 bg-[#F1F4F9] hover:bg-[#E0E2EC] text-[#414754] rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
-                  Re-Roll Visual
+                  تولید دوباره
                 </button>
               </div>
             </div>
@@ -926,9 +930,9 @@ export const StudioModal: React.FC<StudioModalProps> = ({
         <div className="hidden sm:flex px-6 py-3 bg-[#F8F9FD] border-t border-[#E0E2EC] items-center justify-between text-xs text-[#727785] shrink-0">
           <div className="flex items-center gap-1.5">
             <ShieldCheck className="w-4 h-4 text-blue-600" />
-            <span>OpenRouter Protocol & Google GenAI Certified Engine</span>
+            <span>موتور تأییدشده OpenRouter و Google GenAI</span>
           </div>
-          <span>Quota: {userCompletedGenerations} / {userGenerationLimit} Images</span>
+          <span>سهمیه: {userCompletedGenerations} / {userGenerationLimit} تصویر</span>
         </div>
 
         {!hasGenerationStarted && (
@@ -939,7 +943,7 @@ export const StudioModal: React.FC<StudioModalProps> = ({
               className={`w-full min-h-12 font-semibold px-4 rounded-2xl transition-all flex items-center justify-center gap-2 text-sm ${isLimitReached ? 'bg-gray-200 text-gray-500' : 'bg-[#1A73E8] active:scale-[0.98] text-white shadow-lg shadow-blue-200'} disabled:opacity-60`}
             >
               {isLimitReached ? <Lock className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
-              <span>{isLimitReached ? 'Generation limit reached' : `Create visual · ${remainingGenerations} remaining`}</span>
+              <span>{isLimitReached ? 'سقف تولید تکمیل شده است' : `تولید تصویر · ${remainingGenerations} باقی‌مانده`}</span>
             </button>
           </div>
         )}

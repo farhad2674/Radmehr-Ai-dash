@@ -74,7 +74,7 @@ export function useOpenRouterImageGenerator(): UseOpenRouterImageGeneratorResult
         const initData = await initRes.json();
 
         if (!initRes.ok || !initData.taskId) {
-          throw new Error(initData.error || 'Failed to initiate generation task.');
+          throw new Error(initData.error || 'آغاز فرایند تولید تصویر ناموفق بود.');
         }
 
         const currentTaskId = initData.taskId;
@@ -88,14 +88,14 @@ export function useOpenRouterImageGenerator(): UseOpenRouterImageGeneratorResult
             try {
               const remainingWaitMs = getRemainingWaitMs(generationStartedAt);
               if (remainingWaitMs <= 0) {
-                throw new Error('Image generation timed out after 4 minutes. Please try again.');
+                throw new Error('زمان تولید تصویر پس از ۴ دقیقه به پایان رسید؛ دوباره تلاش کنید.');
               }
 
               const statusRes = await fetchWithTimeout(`/api/openrouter/status?taskId=${currentTaskId}`, {}, remainingWaitMs);
               const statusData = await statusRes.json();
 
               if (!statusRes.ok) {
-                throw new Error(statusData.error || 'Error checking task status.');
+                throw new Error(statusData.error || 'بررسی وضعیت فرایند با خطا روبه‌رو شد.');
               }
 
               const currentStatus = statusData.status?.toUpperCase();
@@ -107,14 +107,14 @@ export function useOpenRouterImageGenerator(): UseOpenRouterImageGeneratorResult
                 if (statusData.imageUrl) {
                   resolve(statusData.imageUrl);
                 } else {
-                  const err = 'Task completed but no image URL was returned.';
+                  const err = 'فرایند کامل شد، اما نشانی تصویر دریافت نشد.';
                   setError(err);
                   reject(new Error(err));
                 }
               } else if (currentStatus === 'FAILED') {
                 cancelPolling();
                 setLoading(false);
-                const err = statusData.error || 'Image generation failed on server.';
+                const err = statusData.error || 'تولید تصویر در سرور ناموفق بود.';
                 setError(err);
                 reject(new Error(err));
               } else {
@@ -123,7 +123,7 @@ export function useOpenRouterImageGenerator(): UseOpenRouterImageGeneratorResult
             } catch (err: any) {
               cancelPolling();
               setLoading(false);
-              setError(err.message || 'Polling network failure.');
+              setError(err.message || 'خطای شبکه هنگام بررسی وضعیت.');
               reject(err);
             }
           };
@@ -144,7 +144,7 @@ export function useOpenRouterImageGenerator(): UseOpenRouterImageGeneratorResult
         cancelPolling();
         setLoading(false);
         setStatus('FAILED');
-        const errMsg = err.message || 'An unexpected error occurred.';
+        const errMsg = err.message || 'خطای پیش‌بینی‌نشده‌ای رخ داد.';
         setError(errMsg);
         return null;
       }

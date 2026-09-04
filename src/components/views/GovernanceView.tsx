@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { PersonnelUser, AuditLogEntry, Role } from '../../types';
 import { StorageStats } from '../../services/storageService';
+import { localizeAuditAction, localizeAuditDetails, localizeRelativeTime, localizeRole } from '../../utils/localization';
 
 interface GovernanceViewProps {
   users: PersonnelUser[];
@@ -151,7 +152,7 @@ export const GovernanceView: React.FC<GovernanceViewProps> = ({
     const rows = auditLogs
       .map(
         (log) =>
-          `"${log.id}","${log.timestamp}","${log.user}","${log.type}","${log.action}","${log.details.replace(/"/g, '""')}","${log.units || ''}"`
+          `"${log.id}","${log.timestamp}","${log.user}","${log.type}","${localizeAuditAction(log.action)}","${log.details.replace(/"/g, '""')}","${log.units || ''}"`
       )
       .join('\n');
     const blob = new Blob([headers + rows], { type: 'text/csv' });
@@ -173,11 +174,11 @@ export const GovernanceView: React.FC<GovernanceViewProps> = ({
         const json = JSON.parse(event.target?.result as string);
         if (onImportBackup) {
           onImportBackup(json);
-          setImportStatus('Backup restored successfully!');
+          setImportStatus('نسخه پشتیبان با موفقیت بازیابی شد!');
           setTimeout(() => setImportStatus(null), 3000);
         }
       } catch (err) {
-        setImportStatus('Invalid JSON backup file');
+        setImportStatus('فایل پشتیبان JSON معتبر نیست');
         setTimeout(() => setImportStatus(null), 3000);
       }
     };
@@ -221,7 +222,7 @@ export const GovernanceView: React.FC<GovernanceViewProps> = ({
     return true;
   });
 
-  // Filtered Audit Logs
+  // Filtered گزارش رویدادها
   const filteredAuditLogs = auditLogs.filter((log) => {
     const matchesSearch =
       log.user.toLowerCase().includes(auditSearch.toLowerCase()) ||
@@ -233,19 +234,19 @@ export const GovernanceView: React.FC<GovernanceViewProps> = ({
   });
 
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6 animate-fade-in pb-28 md:pb-12">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6 animate-fade-in pb-28 md:pb-12">
       
       {/* Top Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#E0E2EC] pb-5">
         <div>
-          <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-[#191c23] flex items-center gap-2.5">
-            Enterprise Governance & Server Storage
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-[#191c23] flex flex-wrap items-center gap-2.5">
+            راهبری سازمانی و ذخیره‌سازی سرور
             <span className="text-xs px-3 py-1 rounded-full bg-blue-50 text-[#1A73E8] font-mono font-semibold border border-blue-100">
               Parspack / Self-Hosted
             </span>
           </h2>
           <p className="text-sm text-[#5F6368] mt-1">
-            Manage user quotas, inspect local server disk databases, export/import backups, and audit generation activity.
+            سهمیه کاربران، داده‌های سرور، پشتیبان‌گیری و رویدادهای تولید را مدیریت کنید.
           </p>
         </div>
 
@@ -255,63 +256,63 @@ export const GovernanceView: React.FC<GovernanceViewProps> = ({
             <button
               onClick={onExportBackup}
               className="px-3.5 py-2 bg-white hover:bg-[#F8F9FD] border border-[#DADCE0] text-[#191c23] text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
-              title="Download full JSON backup of templates, users, and assets"
+              title="دانلود پشتیبان کامل JSON از قالب‌ها، کاربران و تصاویر"
             >
               <Download className="w-3.5 h-3.5 text-[#1A73E8]" />
-              <span>Export JSON Backup</span>
+              <span>خروجی پشتیبان JSON</span>
             </button>
           )}
 
           <button
             onClick={() => setShowResetConfirmModal(true)}
             className="px-3.5 py-2 bg-white hover:bg-[#F8F9FD] border border-[#DADCE0] text-[#414754] text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
-            title="Reset Completed Counts for All Users"
+            title="صفرکردن شمارنده تولید همه کاربران"
           >
             <RotateCcw className="w-3.5 h-3.5 text-[#1A73E8]" />
-            <span>Reset All Quotas</span>
+            <span>بازنشانی همه سهمیه‌ها</span>
           </button>
         </div>
       </div>
 
       {/* Navigation Sub-Tabs */}
-      <div className="flex items-center gap-2 border-b border-[#E0E2EC] pb-2">
+      <div className="flex w-full items-center gap-2 overflow-x-auto border-b border-[#E0E2EC] pb-2 no-scrollbar">
         <button
           onClick={() => setActiveSubTab('users_quotas')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+          className={`shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
             activeSubTab === 'users_quotas'
               ? 'bg-[#1A73E8] text-white shadow-2xs'
               : 'bg-white text-[#5F6368] hover:bg-[#F1F4F9] border border-[#DADCE0]'
           }`}
         >
           <Gauge className="w-4 h-4" />
-          <span>User Quotas & Limits ({users.length})</span>
+          <span>کاربران و سهمیه‌ها ({users.length})</span>
         </button>
 
         <button
           onClick={() => setActiveSubTab('disk_storage')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+          className={`shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
             activeSubTab === 'disk_storage'
               ? 'bg-[#1A73E8] text-white shadow-2xs'
               : 'bg-white text-[#5F6368] hover:bg-[#F1F4F9] border border-[#DADCE0]'
           }`}
         >
           <HardDrive className="w-4 h-4" />
-          <span>Server Disk Storage (Parspack PaaS)</span>
+          <span>ذخیره‌سازی دیسک سرور (Parspack PaaS)</span>
           <span className="text-[10px] bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-mono">
-            Zero-Cost
+            بدون هزینه
           </span>
         </button>
 
         <button
           onClick={() => setActiveSubTab('audit_logs')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+          className={`shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
             activeSubTab === 'audit_logs'
               ? 'bg-[#1A73E8] text-white shadow-2xs'
               : 'bg-white text-[#5F6368] hover:bg-[#F1F4F9] border border-[#DADCE0]'
           }`}
         >
           <ShieldCheck className="w-4 h-4" />
-          <span>Audit Logs ({auditLogs.length})</span>
+          <span>گزارش رویدادها ({auditLogs.length})</span>
         </button>
       </div>
 
@@ -320,8 +321,8 @@ export const GovernanceView: React.FC<GovernanceViewProps> = ({
       {/* ============================================================== */}
       {activeSubTab === 'users_quotas' && (
         <div className="space-y-6">
-          {/* AI Image Generation Limit Policy & Metrics Banner */}
-          <div className="bg-gradient-to-br from-white to-[#F8F9FD] rounded-2xl p-6 border border-[#DADCE0] shadow-soft space-y-6">
+          {/* سیاست سقف تولید تصویر هوش مصنوعی & Metrics Banner */}
+          <div className="bg-gradient-to-br from-white to-[#F8F9FD] rounded-2xl p-4 sm:p-6 border border-[#DADCE0] shadow-soft space-y-6">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-[#E0E2EC]">
               
               {/* Policy Headline */}
@@ -332,14 +333,14 @@ export const GovernanceView: React.FC<GovernanceViewProps> = ({
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="font-bold text-base text-[#191c23]">
-                      AI Image Generation Limit Policy
+                      سیاست سقف تولید تصویر هوش مصنوعی
                     </h3>
                     <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-800 text-[10px] font-bold uppercase tracking-wider">
-                      Enforcement Active
+                      اعمال فعال
                     </span>
                   </div>
                   <p className="text-xs text-[#5F6368] mt-1 leading-relaxed">
-                    Control the maximum number of completed AI images each team member can generate. When a user reaches their quota (e.g. 50/50), new image requests are locked until increased or reset.
+                    حداکثر تعداد تصاویر قابل تولید برای هر عضو تیم را تعیین کنید. پس از تکمیل سهمیه، درخواست‌های جدید تا افزایش یا بازنشانی سهمیه متوقف می‌شوند.
                   </p>
                 </div>
               </div>
@@ -348,7 +349,7 @@ export const GovernanceView: React.FC<GovernanceViewProps> = ({
               <div className="bg-white p-4 rounded-xl border border-[#DADCE0] shadow-2xs flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                 <div>
                   <label className="block text-[11px] font-bold uppercase tracking-wider text-[#5F6368]">
-                    Default User Limit
+                    سهمیه پیش‌فرض کاربر
                   </label>
                   <div className="flex items-center gap-2 mt-1">
                     <input
@@ -359,26 +360,26 @@ export const GovernanceView: React.FC<GovernanceViewProps> = ({
                       onChange={(e) => setGlobalLimitInput(Math.max(1, parseInt(e.target.value) || 1))}
                       className="w-20 px-3 py-1.5 bg-[#F1F4F9] border border-[#DADCE0] rounded-lg text-sm font-bold text-[#191c23] focus:outline-none focus:ring-2 focus:ring-[#1A73E8]"
                     />
-                    <span className="text-xs text-[#5F6368] font-medium">images / user</span>
+                    <span className="text-xs text-[#5F6368] font-medium">تصویر برای هر کاربر</span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 sm:border-l border-[#E0E2EC] sm:pl-3">
+                <div className="flex items-center gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 sm:border-s border-[#E0E2EC] sm:ps-3">
                   <button
                     type="button"
                     onClick={() => handleApplyGlobalLimit(false)}
                     className="px-3 py-2 bg-[#F1F4F9] hover:bg-[#E0E2EC] text-[#191c23] text-xs font-semibold rounded-lg transition-colors cursor-pointer whitespace-nowrap"
-                    title="Sets default for future invites only"
+                    title="فقط برای کاربران دعوت‌شده در آینده"
                   >
-                    Set for New Users
+                    اعمال برای کاربران جدید
                   </button>
                   <button
                     type="button"
                     onClick={() => handleApplyGlobalLimit(true)}
                     className="px-3.5 py-2 bg-[#1A73E8] hover:bg-[#1557B0] text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer shadow-2xs whitespace-nowrap"
-                    title="Applies this limit to all existing users and future invites"
+                    title="اعمال برای همه کاربران فعلی و آینده"
                   >
-                    Apply to All ({globalLimitInput})
+                    اعمال برای همه ({globalLimitInput})
                   </button>
                 </div>
               </div>
@@ -387,14 +388,14 @@ export const GovernanceView: React.FC<GovernanceViewProps> = ({
             {showGlobalLimitSuccess && (
               <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-xs text-green-700 flex items-center gap-2 animate-fade-in">
                 <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
-                <span>Workspace default image generation limit updated to {globalLimitInput} per user!</span>
+                <span>سهمیه پیش‌فرض تولید تصویر به {globalLimitInput} برای هر کاربر تغییر کرد!</span>
               </div>
             )}
 
             {/* Quota Telemetry Metrics 4-Cards Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 min-[390px]:grid-cols-2 md:grid-cols-4 gap-4">
               <div className="p-4 bg-white rounded-xl border border-[#DADCE0] shadow-2xs">
-                <span className="text-[11px] text-[#5F6368] font-medium block">Total Completed Images</span>
+                <span className="text-[11px] text-[#5F6368] font-medium block">کل تصاویر تولیدشده</span>
                 <div className="flex items-baseline gap-2 mt-1">
                   <span className="text-2xl font-bold font-mono text-[#191c23]">{totalCompletedGenerations}</span>
                   <span className="text-xs text-[#5F6368] font-mono">/ {totalAllocatedLimit}</span>
@@ -408,61 +409,61 @@ export const GovernanceView: React.FC<GovernanceViewProps> = ({
               </div>
 
               <div className="p-4 bg-white rounded-xl border border-[#DADCE0] shadow-2xs">
-                <span className="text-[11px] text-[#5F6368] font-medium block">Standard Limit per User</span>
+                <span className="text-[11px] text-[#5F6368] font-medium block">سهمیه استاندارد هر کاربر</span>
                 <div className="flex items-baseline gap-1.5 mt-1">
                   <span className="text-2xl font-bold font-mono text-[#1A73E8]">{defaultGenerationLimit}</span>
-                  <span className="text-xs text-[#5F6368]">Generations</span>
+                  <span className="text-xs text-[#5F6368]">تولید</span>
                 </div>
-                <span className="text-[11px] text-green-600 font-medium block mt-1.5">✓ Configurable</span>
+                <span className="text-[11px] text-green-600 font-medium block mt-1.5">✓ قابل تنظیم</span>
               </div>
 
               <div className={`p-4 bg-white rounded-xl border shadow-2xs ${usersAtLimitCount > 0 ? 'border-red-300 bg-red-50/30' : 'border-[#DADCE0]'}`}>
-                <span className="text-[11px] text-[#5F6368] font-medium block">Users at Quota Limit (100%)</span>
+                <span className="text-[11px] text-[#5F6368] font-medium block">کاربران با سهمیه تکمیل‌شده (۱۰۰٪)</span>
                 <div className="flex items-baseline gap-1.5 mt-1">
                   <span className={`text-2xl font-bold font-mono ${usersAtLimitCount > 0 ? 'text-red-600' : 'text-[#191c23]'}`}>
                     {usersAtLimitCount}
                   </span>
-                  <span className="text-xs text-[#5F6368]">Users Locked</span>
+                  <span className="text-xs text-[#5F6368]">کاربر محدودشده</span>
                 </div>
                 <span className="text-[11px] text-[#727785] block mt-1.5">
-                  {usersAtLimitCount > 0 ? 'Requires limit boost/reset' : 'All users active'}
+                  {usersAtLimitCount > 0 ? 'نیازمند افزایش یا بازنشانی سهمیه' : 'همه کاربران فعال‌اند'}
                 </span>
               </div>
 
               <div className="p-4 bg-white rounded-xl border border-[#DADCE0] shadow-2xs">
-                <span className="text-[11px] text-[#5F6368] font-medium block">Near Quota Threshold (≥80%)</span>
+                <span className="text-[11px] text-[#5F6368] font-medium block">نزدیک به سقف سهمیه (≥۸۰٪)</span>
                 <div className="flex items-baseline gap-1.5 mt-1">
                   <span className="text-2xl font-bold font-mono text-amber-600">{usersNearLimitCount}</span>
-                  <span className="text-xs text-[#5F6368]">Users</span>
+                  <span className="text-xs text-[#5F6368]">کاربر</span>
                 </div>
-                <span className="text-[11px] text-[#727785] block mt-1.5">Approaching ceiling</span>
+                <span className="text-[11px] text-[#727785] block mt-1.5">نزدیک به سقف</span>
               </div>
             </div>
           </div>
 
           {/* Invite New Team Member Card */}
-          <div className="bg-white rounded-2xl p-6 border border-[#DADCE0] shadow-soft space-y-4">
+          <div className="bg-white rounded-2xl p-4 sm:p-6 border border-[#DADCE0] shadow-soft space-y-4">
             <h3 className="text-xs font-bold text-[#414754] uppercase tracking-wider flex items-center gap-2">
               <UserPlus className="w-4 h-4 text-[#1A73E8]" />
-              Invite Team Member with Custom Limit
+              دعوت عضو تیم با سهمیه اختصاصی
             </h3>
 
             <form onSubmit={handleInviteSubmit} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
               <div className="md:col-span-3">
-                <label className="block text-xs font-medium text-[#5F6368] mb-1">Full Name</label>
+                <label className="block text-xs font-medium text-[#5F6368] mb-1">نام کامل</label>
                 <input
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  placeholder="e.g. Sara Radmehr"
+                  placeholder="برای نمونه: سارا رادمهر"
                   className="w-full px-3.5 py-2 bg-[#F1F4F9] border border-[#DADCE0] rounded-xl text-xs sm:text-sm text-[#191c23] focus:outline-none focus:ring-2 focus:ring-[#1A73E8]"
                 />
               </div>
 
               <div className="md:col-span-4">
-                <label className="block text-xs font-medium text-[#5F6368] mb-1">Email Address</label>
+                <label className="block text-xs font-medium text-[#5F6368] mb-1">نشانی ایمیل</label>
                 <input
-                  type="email"
+                  type="email" dir="ltr"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="sara.radmehr@company.ir"
@@ -471,22 +472,22 @@ export const GovernanceView: React.FC<GovernanceViewProps> = ({
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-xs font-medium text-[#5F6368] mb-1">Role</label>
+                <label className="block text-xs font-medium text-[#5F6368] mb-1">نقش</label>
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value as Role)}
                   className="w-full px-3 py-2 bg-[#F1F4F9] border border-[#DADCE0] rounded-xl text-xs sm:text-sm font-medium text-[#191c23] focus:outline-none focus:ring-2 focus:ring-[#1A73E8]"
                 >
-                  <option value="Editor">Editor</option>
-                  <option value="Creator">Creator</option>
-                  <option value="Viewer">Viewer</option>
-                  <option value="Supervisor">Supervisor</option>
+                  <option value="Editor">ویرایشگر</option>
+                  <option value="Creator">سازنده</option>
+                  <option value="Viewer">مشاهده‌گر</option>
+                  <option value="Supervisor">سرپرست</option>
                 </select>
               </div>
 
               <div className="md:col-span-3 flex items-center gap-2">
                 <div className="flex-1">
-                  <label className="block text-xs font-medium text-[#5F6368] mb-1">Max Images</label>
+                  <label className="block text-xs font-medium text-[#5F6368] mb-1">حداکثر تصویر</label>
                   <input
                     type="number"
                     min="1"
@@ -502,7 +503,7 @@ export const GovernanceView: React.FC<GovernanceViewProps> = ({
                   className="px-4 py-2 bg-[#1A73E8] hover:bg-[#1557B0] text-white text-xs font-semibold rounded-xl transition-all shadow-xs shrink-0 cursor-pointer h-[38px] flex items-center gap-1.5"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Invite</span>
+                  <span>دعوت</span>
                 </button>
               </div>
             </form>
@@ -510,33 +511,33 @@ export const GovernanceView: React.FC<GovernanceViewProps> = ({
             {inviteSuccess && (
               <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-xs text-green-700 flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
-                <span>Personnel member invited and quota allocated successfully!</span>
+                <span>عضو تیم با موفقیت دعوت و سهمیه او اختصاص داده شد!</span>
               </div>
             )}
           </div>
 
           {/* Personnel Table Card */}
-          <div className="bg-white rounded-2xl p-6 border border-[#DADCE0] shadow-soft space-y-4">
+          <div className="bg-white rounded-2xl p-4 sm:p-6 border border-[#DADCE0] shadow-soft space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <h3 className="text-xs font-bold text-[#414754] uppercase tracking-wider flex items-center gap-2">
                 <Users className="w-4 h-4 text-[#1A73E8]" />
-                Team Quota Usage & Limit Controls ({filteredUsers.length})
+                مصرف سهمیه و کنترل اعضای تیم ({filteredUsers.length})
               </h3>
 
               <div className="flex items-center gap-2 flex-wrap">
                 <div className="relative">
-                  <Search className="w-3.5 h-3.5 text-[#727785] absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Search className="w-3.5 h-3.5 text-[#727785] absolute start-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     value={userSearch}
                     onChange={(e) => setUserSearch(e.target.value)}
-                    placeholder="Search personnel..."
-                    className="pl-8 pr-3 py-1.5 bg-[#F1F4F9] border border-[#DADCE0] rounded-lg text-xs text-[#191c23] focus:outline-none focus:ring-2 focus:ring-[#1A73E8]"
+                    placeholder="جست‌وجوی اعضای تیم…"
+                    className="ps-8 pe-3 py-1.5 bg-[#F1F4F9] border border-[#DADCE0] rounded-lg text-xs text-[#191c23] focus:outline-none focus:ring-2 focus:ring-[#1A73E8]"
                   />
                 </div>
 
                 {/* Filter Pills */}
-                <div className="flex items-center gap-1 bg-[#F1F4F9] p-0.5 rounded-lg border border-[#DADCE0]">
+                <div className="flex max-w-full items-center gap-1 overflow-x-auto bg-[#F1F4F9] p-0.5 rounded-lg border no-scrollbar border-[#DADCE0]">
                   {(['All', 'AtLimit', 'NearLimit', 'Healthy'] as const).map((filterVal) => (
                     <button
                       key={filterVal}
@@ -545,7 +546,7 @@ export const GovernanceView: React.FC<GovernanceViewProps> = ({
                         quotaFilter === filterVal ? 'bg-white text-[#1A73E8] shadow-2xs font-bold' : 'text-[#5F6368]'
                       }`}
                     >
-                      {filterVal === 'All' ? 'All' : filterVal === 'AtLimit' ? 'At Limit 🔴' : filterVal === 'NearLimit' ? 'Near Limit 🟡' : 'Healthy 🟢'}
+                      {filterVal === 'All' ? 'همه' : filterVal === 'AtLimit' ? 'سهمیه تکمیل 🔴' : filterVal === 'NearLimit' ? 'نزدیک سقف 🟡' : 'عادی 🟢'}
                     </button>
                   ))}
                 </div>
@@ -553,16 +554,16 @@ export const GovernanceView: React.FC<GovernanceViewProps> = ({
             </div>
 
             {/* Users Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+            <div className="overflow-x-auto rounded-xl border border-slate-200 md:border-0">
+              <table className="w-full text-start text-xs">
                 <thead>
                   <tr className="border-b border-[#E0E2EC] text-[11px] font-bold uppercase tracking-wider text-[#5F6368]">
-                    <th className="pb-3 px-2">Member</th>
-                    <th className="pb-3 px-2">Role</th>
-                    <th className="pb-3 px-2">Completed Generations</th>
-                    <th className="pb-3 px-2">Assigned Limit</th>
-                    <th className="pb-3 px-2">Status</th>
-                    <th className="pb-3 px-2 text-right">Actions</th>
+                    <th className="pb-3 px-2">عضو</th>
+                    <th className="pb-3 px-2">نقش</th>
+                    <th className="pb-3 px-2">تولیدهای تکمیل‌شده</th>
+                    <th className="pb-3 px-2">سهمیه اختصاص‌یافته</th>
+                    <th className="pb-3 px-2">وضعیت</th>
+                    <th className="pb-3 px-2 text-end">عملیات</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#F0F2F8]">
@@ -588,7 +589,7 @@ export const GovernanceView: React.FC<GovernanceViewProps> = ({
 
                         <td className="py-3 px-2">
                           <span className="text-[11px] px-2 py-0.5 rounded-md bg-[#F1F4F9] text-[#414754] font-medium">
-                            {user.role}
+                            {localizeRole(user.role)}
                           </span>
                         </td>
 
@@ -599,7 +600,7 @@ export const GovernanceView: React.FC<GovernanceViewProps> = ({
                                 {completed} / {user.allowUnlimited ? '∞' : limit}
                               </span>
                               <span className={`font-mono text-[10px] ${isMaxed ? 'text-red-600 font-bold' : 'text-[#5F6368]'}`}>
-                                {user.allowUnlimited ? 'Unlimited' : `${pct}%`}
+                                {user.allowUnlimited ? 'نامحدود' : `${pct}%`}
                               </span>
                             </div>
                             <div className="w-full bg-[#E0E2EC] h-1.5 rounded-full overflow-hidden">
@@ -615,37 +616,37 @@ export const GovernanceView: React.FC<GovernanceViewProps> = ({
 
                         <td className="py-3 px-2">
                           <span className="font-mono text-xs font-semibold text-[#191c23]">
-                            {user.allowUnlimited ? 'Unlimited (No Cap)' : `${limit} Images`}
+                            {user.allowUnlimited ? 'نامحدود (بدون سقف)' : `${limit} تصویر`}
                           </span>
                         </td>
 
                         <td className="py-3 px-2">
                           {isMaxed ? (
                             <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-800 text-[10px] font-bold flex items-center gap-1 w-max">
-                              <span>🔒 Limit Reached</span>
+                              <span>🔒 سهمیه تکمیل</span>
                             </span>
                           ) : (
                             <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-800 text-[10px] font-bold flex items-center gap-1 w-max">
-                              <span>✓ Active</span>
+                              <span>✓ فعال</span>
                             </span>
                           )}
                         </td>
 
-                        <td className="py-3 px-2 text-right">
+                        <td className="py-3 px-2 text-end">
                           <div className="flex items-center justify-end gap-1.5">
                             <button
                               onClick={() => handleOpenEditLimit(user)}
                               className="px-2.5 py-1 rounded-lg bg-[#E8F0FE] hover:bg-blue-200 text-[#1A73E8] text-[11px] font-semibold transition-colors cursor-pointer"
-                              title="Edit generation quota limit"
+                              title="ویرایش سقف سهمیه تولید"
                             >
-                              Edit Limit
+                              ویرایش سهمیه
                             </button>
                             <button
                               onClick={() => onResetUserUsage(user.id)}
                               className="px-2 py-1 rounded-lg bg-[#F1F4F9] hover:bg-[#E0E2EC] text-[#5F6368] text-[11px] transition-colors cursor-pointer"
-                              title="Reset completed count to 0"
+                              title="صفرکردن تعداد تولیدهای تکمیل‌شده"
                             >
-                              Reset
+                              بازنشانی
                             </button>
                           </div>
                         </td>
@@ -666,7 +667,7 @@ export const GovernanceView: React.FC<GovernanceViewProps> = ({
         <div className="space-y-6 animate-fade-in">
           
           {/* Architecture Overview Card */}
-          <div className="bg-gradient-to-br from-white via-[#F8F9FD] to-blue-50/40 rounded-2xl p-6 border border-[#DADCE0] shadow-soft space-y-5">
+          <div className="bg-gradient-to-br from-white via-[#F8F9FD] to-blue-50/40 rounded-2xl p-4 sm:p-6 border border-[#DADCE0] shadow-soft space-y-5">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-3.5">
                 <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-sm shrink-0">
@@ -675,71 +676,71 @@ export const GovernanceView: React.FC<GovernanceViewProps> = ({
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="font-bold text-lg text-[#191c23]">
-                      Parspack PaaS & Node.js Native Disk Engine
+                      موتور ذخیره‌سازی بومی Node.js در پارس‌پک
                     </h3>
                     <span className="px-2.5 py-0.5 rounded-full bg-green-100 text-green-800 text-xs font-bold">
-                      100% Free & Self-Contained
+                      کاملاً مستقل و بدون هزینه
                     </span>
                   </div>
                   <p className="text-xs text-[#5F6368] mt-1 leading-relaxed max-w-2xl">
-                    Tailored for autonomous deployment in Iran and restricted regions. Stores JSON databases directly on server disk (<code className="text-[#1A73E8]">./data/*.json</code>) and serves image assets locally (<code className="text-[#1A73E8]">/uploads/*</code>) without foreign cloud subscription fees or Firebase credit card barriers.
+                    مناسب استقرار مستقل در ایران و مناطق محدود. پایگاه داده JSON مستقیماً روی دیسک سرور ذخیره می‌شود (<code className="text-[#1A73E8]">./data/*.json</code>) و فایل‌های تصویر به‌صورت محلی ارائه می‌شوند (<code className="text-[#1A73E8]">/uploads/*</code>)؛ بدون هزینه سرویس ابری خارجی یا نیاز به کارت اعتباری Firebase.
                   </p>
                 </div>
               </div>
 
               <div className="hidden sm:flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-xs font-mono font-bold text-green-700">Storage Online</span>
+                <span className="text-xs font-mono font-bold text-green-700">فضای ذخیره‌سازی فعال</span>
               </div>
             </div>
 
             {/* Storage Metric Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2">
+            <div className="grid grid-cols-1 min-[390px]:grid-cols-2 sm:grid-cols-4 gap-4 pt-2">
               <div className="p-4 bg-white rounded-xl border border-[#DADCE0] shadow-2xs">
                 <span className="text-[11px] font-medium text-[#5F6368] flex items-center gap-1.5">
-                  <FolderGit2 className="w-3.5 h-3.5 text-[#1A73E8]" /> Images on Disk
+                  <FolderGit2 className="w-3.5 h-3.5 text-[#1A73E8]" /> تصاویر روی دیسک
                 </span>
                 <p className="text-2xl font-bold font-mono text-[#191c23] mt-1">
                   {storageStats?.imagesStored ?? 14}
                 </p>
                 <span className="text-[10px] text-[#727785] block mt-0.5">
-                  Path: <code className="font-mono">/uploads/*.png</code>
+                  مسیر: <code className="font-mono">/uploads/*.png</code>
                 </span>
               </div>
 
               <div className="p-4 bg-white rounded-xl border border-[#DADCE0] shadow-2xs">
                 <span className="text-[11px] font-medium text-[#5F6368] flex items-center gap-1.5">
-                  <Database className="w-3.5 h-3.5 text-blue-600" /> Database File Size
+                  <Database className="w-3.5 h-3.5 text-blue-600" /> حجم فایل پایگاه داده
                 </span>
                 <p className="text-2xl font-bold font-mono text-[#191c23] mt-1">
                   {storageStats?.databaseDiskSizeKB ?? 48} KB
                 </p>
                 <span className="text-[10px] text-green-600 block mt-0.5 font-medium">
-                  ✓ Atomic JSON Writes
+                  ✓ نوشتن اتمیک JSON
                 </span>
               </div>
 
               <div className="p-4 bg-white rounded-xl border border-[#DADCE0] shadow-2xs">
                 <span className="text-[11px] font-medium text-[#5F6368] flex items-center gap-1.5">
-                  <Layers className="w-3.5 h-3.5 text-purple-600" /> Saved Templates
+                  <Layers className="w-3.5 h-3.5 text-purple-600" /> قالب‌های ذخیره‌شده
                 </span>
                 <p className="text-2xl font-bold font-mono text-purple-700 mt-1">
                   {storageStats?.templatesCount ?? 8}
                 </p>
                 <span className="text-[10px] text-[#727785] block mt-0.5">
-                  in <code className="font-mono">templates.json</code>
+                  در <code className="font-mono">templates.json</code>
                 </span>
               </div>
 
               <div className="p-4 bg-white rounded-xl border border-[#DADCE0] shadow-2xs">
                 <span className="text-[11px] font-medium text-[#5F6368] flex items-center gap-1.5">
-                  <Users className="w-3.5 h-3.5 text-emerald-600" /> Tracked Users & Quotas
+                  <Users className="w-3.5 h-3.5 text-emerald-600" /> کاربران و سهمیه‌های ثبت‌شده
                 </span>
                 <p className="text-2xl font-bold font-mono text-emerald-700 mt-1">
                   {storageStats?.usersCount ?? users.length}
                 </p>
                 <span className="text-[10px] text-[#727785] block mt-0.5">
-                  in <code className="font-mono">users.json</code>
+                  در <code className="font-mono">users.json</code>
                 </span>
               </div>
             </div>
@@ -749,13 +750,13 @@ export const GovernanceView: React.FC<GovernanceViewProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             
             {/* Export Backup Card */}
-            <div className="bg-white rounded-2xl p-6 border border-[#DADCE0] shadow-soft space-y-4">
+            <div className="bg-white rounded-2xl p-4 sm:p-6 border border-[#DADCE0] shadow-soft space-y-4">
               <div className="flex items-center gap-2 text-xs font-bold text-[#191c23] uppercase tracking-wider">
                 <Download className="w-4 h-4 text-[#1A73E8]" />
-                <span>1. Export Complete Workspace Snapshot</span>
+                <span>۱. دریافت پشتیبان کامل فضای کاری</span>
               </div>
               <p className="text-xs text-[#5F6368] leading-relaxed">
-                Download a complete, portable JSON snapshot of all your configured Appliance Templates, Custom Variable Modes, Personnel Users, Quota limits, and Historical Audit Logs.
+                یک فایل JSON کامل و قابل‌انتقال از قالب‌ها، حالت‌های متغیر، کاربران، سهمیه‌ها و سابقه رویدادها دریافت کنید.
               </p>
 
               <button
@@ -764,23 +765,23 @@ export const GovernanceView: React.FC<GovernanceViewProps> = ({
                 className="w-full py-3 bg-[#1A73E8] hover:bg-[#1557B0] text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
               >
                 <FileJson className="w-4 h-4" />
-                <span>Download Backup (JSON)</span>
+                <span>دانلود پشتیبان (JSON)</span>
               </button>
             </div>
 
             {/* Import Backup Card */}
-            <div className="bg-white rounded-2xl p-6 border border-[#DADCE0] shadow-soft space-y-4">
+            <div className="bg-white rounded-2xl p-4 sm:p-6 border border-[#DADCE0] shadow-soft space-y-4">
               <div className="flex items-center gap-2 text-xs font-bold text-[#191c23] uppercase tracking-wider">
                 <UploadCloud className="w-4 h-4 text-emerald-600" />
-                <span>2. Restore / Import Backup</span>
+                <span>۲. بازیابی یا ورود پشتیبان</span>
               </div>
               <p className="text-xs text-[#5F6368] leading-relaxed">
-                Restore previously exported JSON data to the Parspack Node.js server disk. This replaces or updates existing templates and user quota records instantly.
+                داده JSON پیشین را روی سرور Node.js پارس‌پک بازیابی کنید. این کار قالب‌ها و سهمیه‌های موجود را جایگزین یا به‌روزرسانی می‌کند.
               </p>
 
               <label className="w-full py-3 bg-[#F1F4F9] hover:bg-[#E0E2EC] text-[#191c23] text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer border border-[#DADCE0]">
                 <UploadCloud className="w-4 h-4 text-[#5F6368]" />
-                <span>Select JSON Backup File</span>
+                <span>انتخاب فایل پشتیبان JSON</span>
                 <input
                   type="file"
                   accept=".json"
@@ -806,22 +807,22 @@ export const GovernanceView: React.FC<GovernanceViewProps> = ({
       {/* SUB-TAB 3: AUDIT LOGS */}
       {/* ============================================================== */}
       {activeSubTab === 'audit_logs' && (
-        <div className="bg-white rounded-2xl p-6 border border-[#DADCE0] shadow-soft space-y-4 animate-fade-in">
+        <div className="bg-white rounded-2xl p-4 sm:p-6 border border-[#DADCE0] shadow-soft space-y-4 animate-fade-in">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <h3 className="text-xs font-bold text-[#414754] uppercase tracking-wider flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-[#1A73E8]" />
-              Immutable Audit & Governance Trail ({filteredAuditLogs.length})
+              تاریخچه تغییرناپذیر رویدادها و راهبری ({filteredAuditLogs.length})
             </h3>
 
             <div className="flex items-center gap-2">
               <div className="relative">
-                <Search className="w-3.5 h-3.5 text-[#727785] absolute left-3 top-1/2 -translate-y-1/2" />
+                <Search className="w-3.5 h-3.5 text-[#727785] absolute start-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   value={auditSearch}
                   onChange={(e) => setAuditSearch(e.target.value)}
-                  placeholder="Search events..."
-                  className="pl-8 pr-3 py-1.5 bg-[#F1F4F9] border border-[#DADCE0] rounded-lg text-xs text-[#191c23] focus:outline-none focus:ring-2 focus:ring-[#1A73E8]"
+                  placeholder="جست‌وجوی رویدادها…"
+                  className="ps-8 pe-3 py-1.5 bg-[#F1F4F9] border border-[#DADCE0] rounded-lg text-xs text-[#191c23] focus:outline-none focus:ring-2 focus:ring-[#1A73E8]"
                 />
               </div>
 
@@ -830,34 +831,34 @@ export const GovernanceView: React.FC<GovernanceViewProps> = ({
                 onChange={(e) => setAuditFilter(e.target.value)}
                 className="px-2.5 py-1.5 bg-[#F1F4F9] border border-[#DADCE0] rounded-lg text-xs text-[#191c23] focus:outline-none focus:ring-2 focus:ring-[#1A73E8]"
               >
-                <option value="All Events">All Events</option>
-                <option value="Generated Image">Generated Image</option>
-                <option value="Limit Modified">Limit Modified</option>
-                <option value="Quota Reset">Quota Reset</option>
-                <option value="Template Saved">Template Saved</option>
-                <option value="Role Changed">Role Changed</option>
+                <option value="All Events">همه رویدادها</option>
+                <option value="Generated Image">تولید تصویر</option>
+                <option value="Limit Modified">تغییر سهمیه</option>
+                <option value="Quota Reset">بازنشانی سهمیه</option>
+                <option value="Template Saved">ذخیره قالب</option>
+                <option value="Role Changed">تغییر نقش</option>
               </select>
 
               <button
                 onClick={handleExportCSV}
                 className="p-1.5 rounded-lg border border-[#DADCE0] hover:bg-[#F1F4F9] text-[#5F6368] cursor-pointer"
-                title="Export CSV"
+                title="خروجی CSV"
               >
                 <Download className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
 
-          {/* Audit Logs Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+          {/* گزارش رویدادها Table */}
+          <div className="overflow-x-auto rounded-xl border border-slate-200 md:border-0">
+            <table className="w-full text-start text-xs">
               <thead>
                 <tr className="border-b border-[#E0E2EC] text-[11px] font-bold uppercase tracking-wider text-[#5F6368]">
-                  <th className="pb-3 px-2">Time</th>
-                  <th className="pb-3 px-2">User</th>
-                  <th className="pb-3 px-2">Action</th>
-                  <th className="pb-3 px-2">Details</th>
-                  <th className="pb-3 px-2 text-right">Units</th>
+                  <th className="pb-3 px-2">زمان</th>
+                  <th className="pb-3 px-2">کاربر</th>
+                  <th className="pb-3 px-2">رویداد</th>
+                  <th className="pb-3 px-2">جزئیات</th>
+                  <th className="pb-3 px-2 text-end">تعداد</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#F0F2F8]">
@@ -871,15 +872,15 @@ export const GovernanceView: React.FC<GovernanceViewProps> = ({
 
                   return (
                     <tr key={log.id} className="hover:bg-[#F8F9FD] transition-colors">
-                      <td className="py-3 px-2 font-mono text-[#5F6368] whitespace-nowrap">{log.time}</td>
+                      <td className="py-3 px-2 font-mono text-[#5F6368] whitespace-nowrap">{localizeRelativeTime(log.time)}</td>
                       <td className="py-3 px-2 font-medium text-[#191c23] whitespace-nowrap">{log.user}</td>
                       <td className="py-3 px-2 whitespace-nowrap">
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${badgeStyle}`}>
-                          {log.action}
+                          {localizeAuditAction(log.action)}
                         </span>
                       </td>
-                      <td className="py-3 px-2 text-[#414754] font-mono text-[11px]">{log.details}</td>
-                      <td className="py-3 px-2 text-right font-mono font-medium text-[#191c23]">{log.units || '-'}</td>
+                      <td className="py-3 px-2 text-[#414754] font-mono text-[11px]">{localizeAuditDetails(log.details)}</td>
+                      <td className="py-3 px-2 text-end font-mono font-medium text-[#191c23]">{log.units || '-'}</td>
                     </tr>
                   );
                 })}
@@ -896,7 +897,7 @@ export const GovernanceView: React.FC<GovernanceViewProps> = ({
             <div className="flex items-center justify-between border-b border-[#E0E2EC] pb-3">
               <h3 className="text-sm font-bold text-[#191c23] flex items-center gap-2">
                 <Gauge className="w-4 h-4 text-[#1A73E8]" />
-                Adjust Limit for {editingUser.name}
+                تنظیم سهمیه {editingUser.name}
               </h3>
               <button
                 onClick={() => setEditingUser(null)}
@@ -909,16 +910,16 @@ export const GovernanceView: React.FC<GovernanceViewProps> = ({
             <div className="space-y-3">
               <div>
                 <label className="block text-xs font-medium text-[#5F6368] mb-1">
-                  Completed Generations Count
+                  تعداد تولیدهای تکمیل‌شده
                 </label>
                 <p className="text-sm font-mono font-bold text-[#191c23]">
-                  {editingUser.completedGenerations || 0} completed
+                  {editingUser.completedGenerations || 0} تولید تکمیل‌شده
                 </p>
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-[#5F6368] mb-1">
-                  New Completed Generation Ceiling
+                  سقف جدید تولید
                 </label>
                 <input
                   type="number"
@@ -938,7 +939,7 @@ export const GovernanceView: React.FC<GovernanceViewProps> = ({
                   onChange={(e) => setTempUnlimited(e.target.checked)}
                   className="rounded text-[#1A73E8] focus:ring-[#1A73E8]"
                 />
-                <span className="text-xs font-semibold text-[#191c23]">Grant Unlimited Access (No limit)</span>
+                <span className="text-xs font-semibold text-[#191c23]">دسترسی نامحدود (بدون سقف)</span>
               </label>
             </div>
 
@@ -947,13 +948,13 @@ export const GovernanceView: React.FC<GovernanceViewProps> = ({
                 onClick={() => setEditingUser(null)}
                 className="px-4 py-2 rounded-xl border border-[#DADCE0] text-xs font-semibold text-[#5F6368] hover:bg-[#F1F4F9] cursor-pointer"
               >
-                Cancel
+                انصراف
               </button>
               <button
                 onClick={handleSaveEditLimit}
                 className="px-5 py-2 rounded-xl bg-[#1A73E8] hover:bg-[#1557B0] text-white text-xs font-semibold shadow-xs cursor-pointer"
               >
-                Save Limit
+                ذخیره سهمیه
               </button>
             </div>
           </div>
@@ -969,8 +970,8 @@ export const GovernanceView: React.FC<GovernanceViewProps> = ({
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-red-900">Reset All Quota Usage?</h3>
-                <p className="text-xs text-red-700 mt-0.5">This will reset completed counts to 0 for all {users.length} members.</p>
+                <h3 className="text-sm font-bold text-red-900">همه مصرف سهمیه‌ها بازنشانی شود؟</h3>
+                <p className="text-xs text-red-700 mt-0.5">This will reset تولید تکمیل‌شده counts to 0 for all {users.length} عضو به صفر بازمی‌گرداند.</p>
               </div>
             </div>
 
@@ -979,7 +980,7 @@ export const GovernanceView: React.FC<GovernanceViewProps> = ({
                 onClick={() => setShowResetConfirmModal(false)}
                 className="px-4 py-2 rounded-xl border border-[#DADCE0] text-xs font-semibold text-[#5F6368] hover:bg-[#F1F4F9] cursor-pointer"
               >
-                Cancel
+                انصراف
               </button>
               <button
                 onClick={() => {
@@ -988,7 +989,7 @@ export const GovernanceView: React.FC<GovernanceViewProps> = ({
                 }}
                 className="px-5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-semibold shadow-xs cursor-pointer"
               >
-                Confirm Reset All
+                تأیید بازنشانی همه
               </button>
             </div>
           </div>

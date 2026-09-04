@@ -1,1 +1,22 @@
-[]
+[
+  {
+    "id": "asset_1788447143448",
+    "templateId": "tmpl-1788334990531",
+    "templateName": "eggg",
+    "prompt": "A sleek, luxury four-door smart refrigerator situated in bright modern minimalist Scandinavian kitchen with marble island. The exterior finish features brushed stainless steel with subtle ice-blue LED accent lines. An illuminated interactive touch display clearly shows title: Smart Inverter Tech - 2026 Edition. Rendered in soft natural daylight streaming through floor-to-ceiling windows, architectural photography style, 8k resolution, crisp photorealistic reflections.",
+    "model": "nano-banana-2",
+    "imageUrl": "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=1200&q=80",
+    "aspectRatio": "16:9",
+    "creator": {
+      "name": "Farhad Abdollahi",
+      "role": "Enterprise AI Admin",
+      "email": "farhad.abdollahi28@gmail.com",
+      "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80"
+    },
+    "createdAt": "2026-09-03T14:52:23.448Z",
+    "timeAgo": "Just now",
+    "likes": 1,
+    "bookmarked": true,
+    "unitsUsed": 24
+  }
+]

@@ -40,7 +40,6 @@ export default function App() {
   const [activeStudioTemplate, setActiveStudioTemplate] = useState<ApplianceTemplate | null>(null);
   const [isStudioModalOpen, setIsStudioModalOpen] = useState<boolean>(false);
   const [builderTemplate, setBuilderTemplate] = useState<ApplianceTemplate | null>(null);
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState<boolean>(false);
 
   // Authentication State with browser cache verification
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
@@ -191,12 +190,14 @@ export default function App() {
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
     generationLimit: defaultGenerationLimit,
     completedGenerations: 0,
-    allowUnlimited: currentUserRole === 'Admin',
+    allowUnlimited: currentUserRole === 'Admin' || currentUserRole === 'SUPER_ADMIN',
     lastActive: 'Just now',
   };
   const currentUserLimit = currentPersonnelUser?.generationLimit || defaultGenerationLimit;
   const currentUserCompleted = currentPersonnelUser?.completedGenerations || 0;
   const currentUserUnlimited = !!currentPersonnelUser?.allowUnlimited;
+  const isAdmin = currentUserRole === 'Admin' || currentUserRole === 'SUPER_ADMIN';
+  const visibleView = currentView === 'governance' && !isAdmin ? 'profile' : currentView;
 
   // Unauthenticated Guard: Display Enterprise Auth Screen if not logged in
   if (!isAuthenticated) {
@@ -217,14 +218,12 @@ export default function App() {
   const handleOpenNewTemplate = () => {
     setBuilderTemplate(null);
     setCurrentView('builder');
-    setMobileSidebarOpen(false);
   };
 
   // Handle editing existing template (Admin)
   const handleEditTemplate = (template: ApplianceTemplate) => {
     setBuilderTemplate(template);
     setCurrentView('builder');
-    setMobileSidebarOpen(false);
   };
 
   // Handle deleting template (Admin)
@@ -529,18 +528,23 @@ export default function App() {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#FDFCF6] text-[#191c23] antialiased selection:bg-[#1A73E8] selection:text-white font-sans">
+    <div className="flex min-h-screen overflow-x-clip bg-[#F7F9FC] text-[#191c23] antialiased selection:bg-[#1A73E8] selection:text-white font-sans">
       {/* Desktop Navigation Sidebar */}
       <Sidebar
         userName={currentUserName}
         onLogout={handleLogout}
-        currentView={currentView}
+        currentView={visibleView}
         onNavigate={(view) => {
           setCurrentView(view);
           if (view !== 'builder') setBuilderTemplate(null);
         }}
-        onNewTemplate={handleOpenNewTemplate}
-        workspaceName="RadmehrAI Studio"
+        onOpenNewTemplate={handleOpenNewTemplate}
+        userEmail={currentUserEmail}
+        userRole={currentUserRole}
+        completedGenerations={currentUserCompleted}
+        generationLimit={currentUserLimit}
+        allowUnlimited={currentUserUnlimited}
+        isAdmin={isAdmin}
       />
 
       {/* Main App Workspace Canvas Area */}
@@ -548,26 +552,19 @@ export default function App() {
         
         {/* Top Navbar */}
         <Navbar
-          currentView={currentView}
-          onLogout={handleLogout}
-          onNavigate={(view) => setCurrentView(view)}
-          user={{
-            name: currentUserName,
-            email: currentUserEmail,
-            role: currentUserRole,
-            avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-          }}
-          userLimit={currentUserLimit}
-          userCompleted={currentUserCompleted}
-          userUnlimited={currentUserUnlimited}
-          onOpenMobileMenu={() => setMobileSidebarOpen(true)}
-          onNewTemplate={handleOpenNewTemplate}
-          onOpenGovernance={() => setCurrentView('governance')}
+          currentView={visibleView}
+          userEmail={currentUserEmail}
+          userRole={currentUserRole}
+          completedGenerations={currentUserCompleted}
+          generationLimit={currentUserLimit}
+          allowUnlimited={currentUserUnlimited}
+          onOpenNewTemplate={handleOpenNewTemplate}
+          onNavigateToGovernance={() => setCurrentView(isAdmin ? 'governance' : 'profile')}
         />
 
         {/* Dynamic View Router */}
         <main className="flex-1">
-          {currentView === 'workspace' && (
+          {visibleView === 'workspace' && (
             <WorkspaceView
               templates={templates}
               onSelectTemplate={handleSelectTemplate}
@@ -578,11 +575,12 @@ export default function App() {
               completedGenerations={currentUserCompleted}
               generationLimit={currentUserLimit}
               allowUnlimited={currentUserUnlimited}
-              onNavigateToGovernance={() => setCurrentView('governance')}
+              isAdmin={isAdmin}
+              onNavigateToGovernance={() => setCurrentView(isAdmin ? 'governance' : 'profile')}
             />
           )}
 
-          {currentView === 'builder' && (
+          {visibleView === 'builder' && (
             <TemplateBuilderView
               initialTemplate={builderTemplate}
               onSaveTemplate={handleSaveTemplate}
@@ -593,15 +591,15 @@ export default function App() {
             />
           )}
 
-          {currentView === 'explore' && (
+          {visibleView === 'explore' && (
             <ExploreFeedView
               assets={assets}
-              onSelectTemplate={handleSelectTemplateById}
+              onSelectTemplateById={handleSelectTemplateById}
               onBookmarkToggle={handleBookmarkToggle}
             />
           )}
 
-          {currentView === 'governance' && (
+          {visibleView === 'governance' && isAdmin && (
             <GovernanceView
               users={users}
               auditLogs={auditLogs}
@@ -619,7 +617,7 @@ export default function App() {
             />
           )}
 
-          {currentView === 'profile' && (
+          {visibleView === 'profile' && (
             <ProfileView
               user={{
                 name: currentUserName,
@@ -636,6 +634,7 @@ export default function App() {
               auditLogs={auditLogs.filter((l) => l.user === currentUserName)}
               userAssets={assets.filter((a) => a.creator.email === currentUserEmail)}
               onOpenGovernance={() => setCurrentView('governance')}
+              isAdmin={isAdmin}
             />
           )}
         </main>
@@ -651,20 +650,22 @@ export default function App() {
         userGenerationLimit={currentUserLimit}
         userCompletedGenerations={currentUserCompleted}
         userAllowUnlimited={currentUserUnlimited}
+        quotaActionLabel={isAdmin ? 'مدیریت در راهبری' : 'مشاهده سهمیه در پروفایل'}
         onOpenGovernance={() => {
           setIsStudioModalOpen(false);
-          setCurrentView('governance');
+          setCurrentView(isAdmin ? 'governance' : 'profile');
         }}
       />
 
       {/* Mobile Navigation Drawer / Tab Bar */}
       <MobileNavigation
-        currentView={currentView}
+        currentView={visibleView}
         onNavigate={(view) => {
           setCurrentView(view);
           if (view !== 'builder') setBuilderTemplate(null);
         }}
-        onNewTemplate={handleOpenNewTemplate}
+        onLogout={handleLogout}
+        isAdmin={isAdmin}
       />
     </div>
   );

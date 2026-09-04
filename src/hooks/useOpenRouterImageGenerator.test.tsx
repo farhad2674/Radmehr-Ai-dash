@@ -96,7 +96,7 @@ describe('useOpenRouterImageGenerator', () => {
     act(() => {
       generation = result.current.generateImage(params);
     });
-    const rejection = expect(generation).rejects.toThrow('Task completed but no image URL was returned.');
+    const rejection = expect(generation).rejects.toThrow('فرایند کامل شد، اما نشانی تصویر دریافت نشد.');
     await act(async () => {
       await vi.advanceTimersByTimeAsync(1_500);
     });

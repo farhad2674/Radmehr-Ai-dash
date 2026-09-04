@@ -16,6 +16,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { GeneratedAsset } from '../../types';
+import { localizeRelativeTime, localizeRole } from '../../utils/localization';
 
 interface ExploreFeedViewProps {
   assets: GeneratedAsset[];
@@ -34,6 +35,7 @@ export const ExploreFeedView: React.FC<ExploreFeedViewProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [viewMode, setViewMode] = useState<'grid' | 'feed'>('grid');
   const [selectedAssetForModal, setSelectedAssetForModal] = useState<GeneratedAsset | null>(null);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   const filteredAssets = assets.filter((asset) => {
     const matchesRole = roleFilter === 'All Roles' || asset.creator.role === roleFilter;
@@ -55,17 +57,17 @@ export const ExploreFeedView: React.FC<ExploreFeedViewProps> = ({
   };
 
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6 animate-fade-in pb-28 md:pb-10">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6 animate-fade-in pb-28 md:pb-10">
       
       {/* Header & Controls matching Screenshot 1 & 6 */}
       <div className="flex flex-col gap-4 border-b border-[#E0E2EC] pb-5">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-[#191c23]">
-              Explore Generated Assets
+              کاوش تصاویر تولیدشده
             </h2>
             <p className="text-sm text-[#5F6368] mt-1 hidden sm:block">
-              Browse enterprise AI generations across models, teams, and appliance lines.
+              تصاویر تولیدشده با مدل‌ها، تیم‌ها و گروه‌های مختلف محصول را مرور کنید.
             </p>
           </div>
 
@@ -76,7 +78,7 @@ export const ExploreFeedView: React.FC<ExploreFeedViewProps> = ({
               className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                 viewMode === 'feed' ? 'bg-[#E8F0FE] text-[#1A73E8]' : 'text-[#727785] hover:text-[#191c23]'
               }`}
-              title="Social Feed View"
+              title="نمای فهرستی"
             >
               <List className="w-4 h-4" />
             </button>
@@ -85,88 +87,97 @@ export const ExploreFeedView: React.FC<ExploreFeedViewProps> = ({
               className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                 viewMode === 'grid' ? 'bg-[#E8F0FE] text-[#1A73E8]' : 'text-[#727785] hover:text-[#191c23]'
               }`}
-              title="Catalog Grid View"
+              title="نمای شبکه‌ای"
             >
               <LayoutGrid className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Filter Controls Row matching Screenshot 1 & 6 */}
-        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 pt-1">
-          <div className="flex items-center gap-3 flex-wrap">
+        {/* Mobile filter disclosure keeps controls comfortable at narrow widths. */}
+        <button onClick={() => setMobileFiltersOpen((open) => !open)} aria-expanded={mobileFiltersOpen} className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white text-sm font-semibold text-slate-700 sm:hidden"><Filter className="h-4 w-4" />{mobileFiltersOpen ? "بستن فیلترها" : "فیلترها"}</button>
+        <div className={(mobileFiltersOpen ? "flex" : "hidden") + " flex-col items-stretch justify-between gap-3 pt-1 sm:flex lg:flex-row lg:items-center"}>
+          <div className="grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-center">
             
             {/* Filter 1: Creator Role */}
             <div className="flex items-center gap-2">
-              <span className="text-xs text-[#5F6368] font-medium hidden sm:inline">Creator Role</span>
+              <span className="text-xs text-[#5F6368] font-medium hidden sm:inline">نقش سازنده</span>
               <div className="relative">
                 <select
                   value={roleFilter}
                   onChange={(e) => setRoleFilter(e.target.value)}
-                  className="appearance-none pl-3 pr-8 py-1.5 bg-white border border-[#DADCE0] rounded-lg text-xs font-medium text-[#191c23] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] cursor-pointer shadow-xs"
+                  className="appearance-none ps-3 pe-8 py-1.5 bg-white border border-[#DADCE0] rounded-lg text-xs font-medium text-[#191c23] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] cursor-pointer shadow-xs"
                 >
-                  <option value="All Roles">All Roles</option>
-                  <option value="Enterprise AI Admin">Enterprise AI Admin</option>
-                  <option value="Supervisor">Supervisor</option>
-                  <option value="Lead Orchestrator">Lead Orchestrator</option>
-                  <option value="Data Scientist">Data Scientist</option>
-                  <option value="Manager">Manager</option>
+                  <option value="All Roles">همه نقش‌ها</option>
+                  <option value="Enterprise AI Admin">مدیر هوش مصنوعی سازمانی</option>
+                  <option value="Supervisor">سرپرست</option>
+                  <option value="Lead Orchestrator">راهبر ارشد</option>
+                  <option value="Data Scientist">دانشمند داده</option>
+                  <option value="Manager">مدیر</option>
                 </select>
-                <ChevronDown className="w-3.5 h-3.5 text-[#727785] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <ChevronDown className="w-3.5 h-3.5 text-[#727785] absolute end-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
             </div>
 
             {/* Filter 2: Model Version */}
             <div className="flex items-center gap-2">
-              <span className="text-xs text-[#5F6368] font-medium hidden sm:inline">Model Version</span>
+              <span className="text-xs text-[#5F6368] font-medium hidden sm:inline">نسخه مدل</span>
               <div className="relative">
                 <select
                   value={modelFilter}
                   onChange={(e) => setModelFilter(e.target.value)}
-                  className="appearance-none pl-3 pr-8 py-1.5 bg-white border border-[#DADCE0] rounded-lg text-xs font-medium text-[#191c23] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] cursor-pointer shadow-xs"
+                  className="appearance-none ps-3 pe-8 py-1.5 bg-white border border-[#DADCE0] rounded-lg text-xs font-medium text-[#191c23] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] cursor-pointer shadow-xs"
                 >
-                  <option value="All Models">All Models</option>
+                  <option value="All Models">همه مدل‌ها</option>
                   <option value="nano-banana-2">nano-banana-2</option>
                   <option value="sedance-2.5-pro">sedance-2.5-pro</option>
                   <option value="SDXL">SDXL</option>
                   <option value="Midjourney v6">Midjourney v6</option>
                 </select>
-                <ChevronDown className="w-3.5 h-3.5 text-[#727785] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <ChevronDown className="w-3.5 h-3.5 text-[#727785] absolute end-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
             </div>
 
             {/* Filter 3: Date Range */}
             <div className="flex items-center gap-2">
-              <span className="text-xs text-[#5F6368] font-medium hidden sm:inline">Date Range</span>
+              <span className="text-xs text-[#5F6368] font-medium hidden sm:inline">بازه زمانی</span>
               <div className="relative">
                 <select
                   value={dateFilter}
                   onChange={(e) => setDateFilter(e.target.value)}
-                  className="appearance-none pl-3 pr-8 py-1.5 bg-white border border-[#DADCE0] rounded-lg text-xs font-medium text-[#191c23] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] cursor-pointer shadow-xs"
+                  className="appearance-none ps-3 pe-8 py-1.5 bg-white border border-[#DADCE0] rounded-lg text-xs font-medium text-[#191c23] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] cursor-pointer shadow-xs"
                 >
-                  <option value="Last 7 Days">Last 7 Days</option>
-                  <option value="Last 24 Hours">Last 24 Hours</option>
-                  <option value="Last 30 Days">Last 30 Days</option>
-                  <option value="All Time">All Time</option>
+                  <option value="Last 7 Days">۷ روز گذشته</option>
+                  <option value="Last 24 Hours">۲۴ ساعت گذشته</option>
+                  <option value="Last 30 Days">۳۰ روز گذشته</option>
+                  <option value="All Time">همه زمان‌ها</option>
                 </select>
-                <ChevronDown className="w-3.5 h-3.5 text-[#727785] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <ChevronDown className="w-3.5 h-3.5 text-[#727785] absolute end-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
             </div>
           </div>
 
           {/* Search Box matching Screenshot 1 & 6 */}
-          <div className="relative min-w-[280px]">
-            <Search className="w-4 h-4 text-[#727785] absolute left-3 top-1/2 -translate-y-1/2" />
+          <div className="relative w-full lg:w-auto lg:min-w-[280px]">
+            <Search className="w-4 h-4 text-[#727785] absolute start-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search prompts..."
+              placeholder="جست‌وجوی پرامپت‌ها…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3.5 py-1.5 bg-white border border-[#DADCE0] rounded-lg text-xs text-[#191c23] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] shadow-xs"
+              className="w-full ps-9 pe-3.5 py-1.5 bg-white border border-[#DADCE0] rounded-lg text-xs text-[#191c23] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] shadow-xs"
             />
           </div>
         </div>
       </div>
+
+      {filteredAssets.length === 0 && (
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center">
+          <Search className="mx-auto h-8 w-8 text-slate-400" />
+          <h3 className="mt-3 text-base font-semibold text-slate-900">تصویری با این فیلترها پیدا نشد</h3>
+          <p className="mt-1 text-sm text-slate-500">فیلترها را پاک یا تغییر دهید تا تصاویر تولیدشده نمایش داده شوند.</p>
+        </div>
+      )}
 
       {/* Grid Mode matching Screenshot 1 & 6 */}
       {viewMode === 'grid' && (
@@ -189,7 +200,7 @@ export const ExploreFeedView: React.FC<ExploreFeedViewProps> = ({
                 />
 
                 {/* Model Pill Badge */}
-                <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[#191c23] text-[11px] font-mono font-medium shadow-xs">
+                <div className="absolute top-3 end-3 bg-white/90 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[#191c23] text-[11px] font-mono font-medium shadow-xs">
                   {asset.model}
                 </div>
               </div>
@@ -206,14 +217,14 @@ export const ExploreFeedView: React.FC<ExploreFeedViewProps> = ({
                   }}
                   className="text-xs font-semibold text-[#1A73E8] hover:text-[#1557B0] transition-colors flex items-center gap-1 cursor-pointer truncate"
                 >
-                  <span>View Original Template</span>
+                  <span>مشاهده قالب اصلی</span>
                 </button>
 
                 <div className="flex items-center gap-1 shrink-0">
                   <button
                     onClick={() => handleDownloadImage(asset.imageUrl, asset.id)}
                     className="p-1.5 text-[#5F6368] hover:text-[#191c23] hover:bg-[#F1F4F9] rounded-lg transition-colors cursor-pointer"
-                    title="Download Asset"
+                    title="دانلود تصویر"
                   >
                     <Download className="w-4 h-4" />
                   </button>
@@ -222,7 +233,7 @@ export const ExploreFeedView: React.FC<ExploreFeedViewProps> = ({
                     className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                       asset.bookmarked ? 'text-[#1A73E8] bg-blue-50' : 'text-[#5F6368] hover:text-[#191c23] hover:bg-[#F1F4F9]'
                     }`}
-                    title={asset.bookmarked ? 'Bookmarked' : 'Bookmark'}
+                    title={asset.bookmarked ? 'ذخیره‌شده' : 'ذخیره'}
                   >
                     <Bookmark className="w-4 h-4" fill={asset.bookmarked ? 'currentColor' : 'none'} />
                   </button>
@@ -260,7 +271,7 @@ export const ExploreFeedView: React.FC<ExploreFeedViewProps> = ({
                       {asset.creator.name}
                     </h4>
                     <p className="text-xs text-[#5F6368] mt-1">
-                      {asset.timeAgo} • <span className="font-medium text-[#1A73E8]">{asset.creator.role}</span>
+                      {localizeRelativeTime(asset.timeAgo)} • <span className="font-medium text-[#1A73E8]">{localizeRole(asset.creator.role)}</span>
                     </p>
                   </div>
                 </div>
@@ -277,7 +288,7 @@ export const ExploreFeedView: React.FC<ExploreFeedViewProps> = ({
                   alt={asset.prompt}
                   className="w-full h-full object-cover"
                 />
-                <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-[#191c23] text-xs font-mono font-medium shadow-xs">
+                <div className="absolute top-3 start-3 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-[#191c23] text-xs font-mono font-medium shadow-xs">
                   {asset.model}
                 </div>
               </div>
@@ -294,14 +305,14 @@ export const ExploreFeedView: React.FC<ExploreFeedViewProps> = ({
                   className="w-full bg-[#1A73E8] hover:bg-[#1557B0] text-white text-xs font-semibold py-2.5 px-4 rounded-full flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
                 >
                   <Download className="w-4 h-4" />
-                  <span>Download</span>
+                  <span>دانلود</span>
                 </button>
                 <button
                   onClick={() => onBookmarkToggle && onBookmarkToggle(asset.id)}
                   className="w-full bg-white border border-[#DADCE0] hover:bg-[#F1F4F9] text-[#414754] text-xs font-semibold py-2.5 px-4 rounded-full flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
                 >
                   <Bookmark className="w-4 h-4" fill={asset.bookmarked ? '#1A73E8' : 'none'} />
-                  <span>{asset.bookmarked ? 'Saved' : 'Save'}</span>
+                  <span>{asset.bookmarked ? 'ذخیره‌شده' : 'ذخیره'}</span>
                 </button>
               </div>
             </div>
@@ -312,14 +323,14 @@ export const ExploreFeedView: React.FC<ExploreFeedViewProps> = ({
       {/* Asset Inspection Modal */}
       {selectedAssetForModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-soft-lg border border-[#DADCE0] space-y-4">
+          <div className="max-h-[calc(100dvh-2rem)] overflow-y-auto bg-white rounded-2xl max-w-2xl w-full p-4 sm:p-6 shadow-soft-lg border border-[#DADCE0] space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-bold text-base text-[#191c23]">
-                  {selectedAssetForModal.templateName || 'Generated Asset Preview'}
+                  {selectedAssetForModal.templateName || 'پیش‌نمایش تصویر تولیدشده'}
                 </h3>
                 <p className="text-xs text-[#5F6368]">
-                  Created by {selectedAssetForModal.creator.name} ({selectedAssetForModal.creator.role})
+                  ساخته‌شده توسط {selectedAssetForModal.creator.name} ({localizeRole(selectedAssetForModal.creator.role)})
                 </p>
               </div>
               <button
@@ -342,13 +353,13 @@ export const ExploreFeedView: React.FC<ExploreFeedViewProps> = ({
               {selectedAssetForModal.prompt}
             </div>
 
-            <div className="flex items-center justify-between gap-3 pt-2">
-              <span className="text-xs text-[#5F6368]">Model: <strong className="font-mono text-[#191c23]">{selectedAssetForModal.model}</strong></span>
+            <div className="flex flex-col items-stretch gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
+              <span className="text-xs text-[#5F6368]">مدل: <strong dir="ltr" className="font-mono text-[#191c23]">{selectedAssetForModal.model}</strong></span>
               <button
                 onClick={() => handleDownloadImage(selectedAssetForModal.imageUrl, selectedAssetForModal.id)}
                 className="px-5 py-2 rounded-full bg-[#1A73E8] text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
               >
-                <Download className="w-4 h-4" /> Download High-Res
+                <Download className="w-4 h-4" /> دانلود با کیفیت اصلی
               </button>
             </div>
           </div>

@@ -1,18 +1,15 @@
 import React from 'react';
+import { formatFaNumber, localizeRole } from '../utils/localization';
 import { 
-  Menu, 
-  Search, 
   Bell, 
   Sparkles, 
   ShieldCheck, 
-  ExternalLink,
   Plus,
   Gauge
 } from 'lucide-react';
 
 interface NavbarProps {
   currentView: string;
-  onOpenMobileMenu: () => void;
   onOpenNewTemplate: () => void;
   onNavigateToGovernance?: () => void;
   userEmail?: string;
@@ -24,7 +21,6 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({
   currentView,
-  onOpenMobileMenu,
   onOpenNewTemplate,
   onNavigateToGovernance,
   userEmail = 'farhad.abdollahi28@gmail.com',
@@ -36,17 +32,17 @@ export const Navbar: React.FC<NavbarProps> = ({
   const getTitle = () => {
     switch (currentView) {
       case 'workspace':
-        return 'Studio Workspace';
+        return 'فضای کار استودیو';
       case 'builder':
-        return 'Template Builder';
+        return 'قالب‌ساز';
       case 'explore':
-        return 'Explore Feed';
+        return 'کاوش تصاویر';
       case 'governance':
-        return 'Team & Governance';
+        return 'تیم و راهبری';
       case 'profile':
-        return 'My Profile';
+        return 'پروفایل من';
       default:
-        return 'RadmehrAI Studio';
+        return 'استودیو RadmehrAI';
     }
   };
 
@@ -54,17 +50,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   const isNearLimit = !allowUnlimited && !isAtLimit && (completedGenerations / generationLimit) >= 0.8;
 
   return (
-    <header className="h-16 bg-white border-b border-[#E0E2EC] px-4 md:px-8 flex items-center justify-between sticky top-0 z-10 select-none">
-      {/* Mobile Menu & Brand */}
+    <header className="min-h-16 bg-white border-b border-[#E0E2EC] px-4 md:px-8 flex items-center justify-between sticky top-0 z-10 select-none">
+      {/* Mobile brand and current destination */}
       <div className="flex items-center gap-3">
-        <button
-          onClick={onOpenMobileMenu}
-          className="md:hidden p-2 rounded-xl text-[#414754] hover:bg-[#F1F4F9] transition-colors cursor-pointer"
-          aria-label="Open navigation menu"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
-
         <div className="flex items-center gap-2">
           <span className="text-sm md:text-base font-bold text-[#191c23] tracking-tight">
             {getTitle()}
@@ -89,39 +77,39 @@ export const Navbar: React.FC<NavbarProps> = ({
               ? 'bg-amber-50 border-amber-200 text-amber-800' 
               : 'bg-[#F8F9FD] border-[#DADCE0] text-[#414754] hover:bg-gray-100'
           }`}
-          title="AI Image Generation Limit & Usage - Click to manage in Governance"
+          title="سهمیه تولید تصویر؛ برای مدیریت کلیک کنید"
         >
           <Gauge className={`w-3.5 h-3.5 ${isAtLimit ? 'text-red-600' : isNearLimit ? 'text-amber-600' : 'text-[#1A73E8]'}`} />
-          <span className="hidden sm:inline text-[#5F6368]">Quota:</span>
+          <span className="hidden sm:inline text-[#5F6368]">سهمیه:</span>
           <span className="font-mono font-bold">
-            {allowUnlimited ? 'Unlimited' : `${completedGenerations} / ${generationLimit}`}
+            {allowUnlimited ? 'نامحدود' : formatFaNumber(completedGenerations) + ' از ' + formatFaNumber(generationLimit)}
           </span>
         </div>
 
         {/* User Account Badge */}
         <div className="hidden lg:flex items-center gap-2 px-3 py-1 rounded-full bg-[#F8F9FD] border border-[#DADCE0] text-xs font-medium text-[#414754]">
           <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-          <span className="font-mono text-[#191c23]">{userEmail}</span>
-          <span className="text-[#1A73E8] font-semibold">({userRole})</span>
+          <span className="font-mono text-[#191c23]" dir="ltr">{userEmail}</span>
+          <span className="text-[#1A73E8] font-semibold">({localizeRole(userRole)})</span>
         </div>
 
         {/* Quick Launch Template Button */}
         <button
           onClick={onOpenNewTemplate}
-          className="bg-[#1A73E8] hover:bg-[#1557B0] active:scale-[0.99] text-white px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
+          className="min-h-11 bg-[#1A73E8] hover:bg-[#1557B0] active:scale-[0.99] text-white px-3.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
         >
           <Plus className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">New Template</span>
+          <span className="hidden sm:inline">قالب جدید</span>
         </button>
 
-        {/* Notifications Icon */}
+        {/* اعلان‌ها Icon */}
         <button
-          onClick={() => alert('RadmehrAI Studio Notifications:\n- Real-time OpenRouter polling engine active\n- Quota limit policy enforced (50 images/user)\n- 0 security policy breaches in last 24h')}
+          onClick={() => alert('اعلان‌های استودیو RadmehrAI:\n- موتور بررسی لحظه‌ای OpenRouter فعال است\n- سیاست سهمیه تولید اعمال شده است (۵۰ تصویر برای هر کاربر)\n- در ۲۴ ساعت گذشته نقض امنیتی ثبت نشده است')}
           className="p-2 rounded-xl text-[#727785] hover:text-[#191c23] hover:bg-[#F1F4F9] transition-colors relative cursor-pointer"
-          aria-label="Notifications"
+          aria-label="اعلان‌ها"
         >
           <Bell className="w-4 h-4" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-blue-600" />
+          <span className="absolute top-1.5 end-1.5 w-2 h-2 rounded-full bg-blue-600" />
         </button>
       </div>
     </header>

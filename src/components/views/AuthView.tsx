@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ApplianceParticleMorphCanvas } from '../ApplianceParticleMorphCanvas';
+import { localizeRole } from '../../utils/localization';
 import {
   Sparkles,
   ArrowRight,
@@ -94,26 +95,26 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuth, initialEmail = '' })
     setSuccessMessage('');
 
     if (!email || !email.includes('@')) {
-      setError('Please provide a valid email address.');
+      setError('لطفاً یک نشانی ایمیل معتبر وارد کنید.');
       return;
     }
 
     if (!password) {
-      setError('Password is required to decrypt your enterprise workspace.');
+      setError('برای ورود به فضای کاری سازمانی، رمز عبور الزامی است.');
       return;
     }
 
     if (!isLogin) {
       if (!name.trim()) {
-        setError('Please enter your full name.');
+        setError('لطفاً نام کامل خود را وارد کنید.');
         return;
       }
       if (password.length < 6) {
-        setError('Password must be at least 6 characters long.');
+        setError('رمز عبور باید دست‌کم ۶ نویسه داشته باشد.');
         return;
       }
       if (confirmPassword && confirmPassword !== password) {
-        setError('Passwords do not match. Please verify your entries.');
+        setError('رمزهای عبور یکسان نیستند؛ دوباره بررسی کنید.');
         return;
       }
     }
@@ -122,7 +123,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuth, initialEmail = '' })
 
     setTimeout(() => {
       setIsLoading(false);
-      setSuccessMessage('Credentials authenticated. Establishing workspace session...');
+      setSuccessMessage('اطلاعات ورود تأیید شد؛ در حال ایجاد نشست فضای کاری…');
       
       setTimeout(() => {
         onAuth({
@@ -141,7 +142,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuth, initialEmail = '' })
     setError('');
     setTimeout(() => {
       setBiometricScanning(false);
-      setSuccessMessage('WebAuthn FIDO2 Biometric Key Verified.');
+      setSuccessMessage('کلید زیست‌سنجی WebAuthn FIDO2 تأیید شد.');
       setTimeout(() => {
         onAuth({
           email: email || 'farhad.abdollahi28@gmail.com',
@@ -181,7 +182,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuth, initialEmail = '' })
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-40" />
       </div>
 
-      <div className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center z-10 px-6 sm:px-10 py-10">
+      <div className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center z-10 px-4 sm:px-10 py-6 sm:py-10">
         
         {/* Left Side: Dynamic Generative AI Particle Morph Canvas */}
         <div className="lg:col-span-7 flex flex-col justify-center pr-0 lg:pr-4">
@@ -202,14 +203,14 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuth, initialEmail = '' })
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-400/30 text-emerald-400 text-xs font-semibold hover:bg-emerald-500/20 transition-colors cursor-pointer"
               >
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                <span>$5M Insured & SOC-2 Type II</span>
+                <span>$5پوشش بیمه ۵ میلیون دلاری و SOC-2 Type II</span>
                 <ExternalLink className="w-3 h-3 ml-0.5 opacity-70" />
               </button>
 
               <div className="flex items-center gap-2">
                 <span className="text-[11px] text-slate-400 font-medium flex items-center gap-1">
                   <Key className="w-3 h-3 text-blue-400" />
-                  Quick Fill:
+                  ورود سریع:
                 </span>
                 {demoAccounts.map((account, idx) => (
                   <button
@@ -218,7 +219,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuth, initialEmail = '' })
                     onClick={() => handleSelectDemo(account)}
                     className="px-2 py-1 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-800 text-slate-300 text-[11px] font-medium transition-colors cursor-pointer"
                   >
-                    {account.name.split(' ')[0]} ({account.role})
+                    {account.name.split(' ')[0]} ({localizeRole(account.role)})
                   </button>
                 ))}
               </div>
@@ -239,54 +240,25 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuth, initialEmail = '' })
               {/* Subtle top glare reflection */}
               <div className="absolute top-0 inset-x-0 h-28 bg-gradient-to-b from-white/10 to-transparent pointer-events-none rounded-t-3xl" />
 
-              {/* Mode Switcher Tabs (Sign In / Sign Up) */}
-              <div className="relative flex p-1 bg-slate-950/80 rounded-2xl mb-7 border border-slate-800">
-                <button
-                  type="button"
-                  id="tab-btn-signin"
-                  onClick={() => { setIsLogin(true); setError(''); setSuccessMessage(''); }}
-                  className={`relative flex-1 py-2.5 text-xs font-bold rounded-xl z-10 transition-colors cursor-pointer ${
-                    isLogin ? 'text-white' : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  Sign In
-                </button>
-                <button
-                  type="button"
-                  id="tab-btn-signup"
-                  onClick={() => { setIsLogin(false); setError(''); setSuccessMessage(''); }}
-                  className={`relative flex-1 py-2.5 text-xs font-bold rounded-xl z-10 transition-colors cursor-pointer ${
-                    !isLogin ? 'text-white' : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  Create Account
-                </button>
-                
-                {/* Floating Tab Active Background Pill */}
-                <motion.div
-                  className="absolute inset-y-1 w-[calc(50%-4px)] bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-md"
-                  animate={{ left: isLogin ? '4px' : 'calc(50%)' }}
-                  transition={{ type: 'spring', stiffness: 450, damping: 35 }}
-                />
+              <div className="relative mb-7 inline-flex min-h-11 items-center gap-2 rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 text-xs font-semibold text-blue-300">
+                <Shield className="h-4 w-4" /> دسترسی امن به فضای کاری
               </div>
 
               {/* Header Title */}
               <div className="mb-6">
                 <h2 className="text-2xl font-bold text-white tracking-tight flex items-center justify-between">
-                  <span>{isLogin ? 'Welcome Back' : 'Create Account'}</span>
+                  <span>خوش آمدید</span>
                   <Shield className="w-5 h-5 text-blue-400" />
                 </h2>
                 <p className="text-xs text-slate-400 mt-1 font-medium">
-                  {isLogin
-                    ? 'Authenticate to access your appliance generation studio.'
-                    : 'Establish your workspace account & quota limit.'}
+                  برای ورود به استودیوی تولید تصاویر محصول، احراز هویت کنید.
                 </p>
               </div>
 
               {/* Interactive Auth Form */}
               <form onSubmit={handleSubmit} className="space-y-4">
                 
-                {/* Full Name & Department (Sign Up Only) */}
+                {/* نام کامل & Department (Sign Up Only) */}
                 <AnimatePresence mode="popLayout">
                   {!isLogin && (
                     <motion.div
@@ -299,41 +271,41 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuth, initialEmail = '' })
                       <div className="space-y-1">
                         <label className="text-xs font-semibold text-slate-300 ml-0.5 flex items-center gap-1.5">
                           <User className="w-3.5 h-3.5 text-slate-400" />
-                          Full Name
+                          نام کامل
                         </label>
                         <input
                           type="text"
                           id="input-name"
                           value={name}
                           onChange={(e) => setName(e.target.value)}
-                          placeholder="e.g. Alex Morgan"
+                          placeholder="برای نمونه: سارا رادمهر"
                           className="w-full px-3.5 py-2.5 bg-slate-950/70 border border-slate-700/80 rounded-xl text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all font-medium"
                         />
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2.5">
+                      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                         <div className="space-y-1">
-                          <label className="text-xs font-semibold text-slate-300 ml-0.5">Role</label>
+                          <label className="text-xs font-semibold text-slate-300 ml-0.5">نقش</label>
                           <select
                             value={role}
                             onChange={(e) => setRole(e.target.value)}
                             className="w-full px-3 py-2 bg-slate-950/70 border border-slate-700/80 rounded-xl text-xs text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all"
                           >
-                            <option value="Admin">Admin</option>
-                            <option value="Supervisor">Supervisor</option>
-                            <option value="Manager">Manager</option>
-                            <option value="Editor">Editor</option>
-                            <option value="Viewer">Viewer</option>
+                            <option value="Admin">مدیر</option>
+                            <option value="Supervisor">سرپرست</option>
+                            <option value="Manager">مدیر واحد</option>
+                            <option value="Editor">ویرایشگر</option>
+                            <option value="Viewer">مشاهده‌گر</option>
                           </select>
                         </div>
 
                         <div className="space-y-1">
-                          <label className="text-xs font-semibold text-slate-300 ml-0.5">Department</label>
+                          <label className="text-xs font-semibold text-slate-300 ml-0.5">واحد سازمانی</label>
                           <input
                             type="text"
                             value={department}
                             onChange={(e) => setDepartment(e.target.value)}
-                            placeholder="Design & Engineering"
+                            placeholder="طراحی و مهندسی"
                             className="w-full px-3 py-2 bg-slate-950/70 border border-slate-700/80 rounded-xl text-xs text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all"
                           />
                         </div>
@@ -347,12 +319,12 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuth, initialEmail = '' })
                   <label className="text-xs font-semibold text-slate-300 ml-0.5 flex items-center justify-between">
                     <span className="flex items-center gap-1.5">
                       <Mail className="w-3.5 h-3.5 text-slate-400" />
-                      Email Address
+                      نشانی ایمیل
                     </span>
-                    <span className="text-[11px] text-blue-400 font-mono">SSO Ready</span>
+                    <span className="text-[11px] text-blue-400 font-mono">آماده SSO</span>
                   </label>
                   <input
-                    type="email"
+                    type="email" dir="ltr"
                     id="input-email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -367,15 +339,15 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuth, initialEmail = '' })
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-semibold text-slate-300 ml-0.5 flex items-center gap-1.5">
                       <Lock className="w-3.5 h-3.5 text-slate-400" />
-                      Password
+                      رمز عبور
                     </label>
                     {isLogin && (
                       <button
                         type="button"
-                        onClick={() => alert('Password reset verification link dispatched to ' + (email || 'your registered email'))}
+                        onClick={() => alert('پیوند بازیابی رمز عبور ارسال شد به ' + (email || 'ایمیل ثبت‌شده شما'))}
                         className="text-[11px] text-blue-400 hover:text-blue-300 font-medium transition-colors cursor-pointer"
                       >
-                        Forgot password?
+                        رمز عبور را فراموش کرده‌اید؟
                       </button>
                     )}
                   </div>
@@ -383,7 +355,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuth, initialEmail = '' })
                   <div className="relative">
                     <input
                       type={showPassword ? 'text' : 'password'}
-                      id="input-password"
+                      id="input-password" dir="ltr"
                       value={password}
                       onKeyDown={handleKeyDown}
                       onChange={(e) => setPassword(e.target.value)}
@@ -394,8 +366,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuth, initialEmail = '' })
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      className="absolute inset-y-0 end-0 pe-3 flex items-center text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+                      aria-label={showPassword ? 'پنهان‌کردن رمز عبور' : 'نمایش رمز عبور'}
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -404,7 +376,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuth, initialEmail = '' })
                   {/* CapsLock Alert */}
                   {capsLockActive && (
                     <p className="text-[11px] text-amber-400 flex items-center gap-1 mt-1 font-medium">
-                      <AlertCircle className="w-3 h-3" /> Caps Lock is ON
+                      <AlertCircle className="w-3 h-3" /> Caps Lock روشن است
                     </p>
                   )}
                 </div>
@@ -419,11 +391,11 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuth, initialEmail = '' })
                       className="pt-1.5 space-y-2 overflow-hidden"
                     >
                       <div className="flex items-center justify-between text-[11px]">
-                        <span className="text-slate-400 font-mono">Password Strength:</span>
+                        <span className="text-slate-400 font-mono">قدرت رمز عبور:</span>
                         <span className={`font-semibold ${
                           pwdScore <= 2 ? 'text-red-400' : pwdScore <= 4 ? 'text-amber-400' : 'text-emerald-400'
                         }`}>
-                          {pwdScore <= 2 ? 'Weak' : pwdScore <= 4 ? 'Moderate' : 'Strong'}
+                          {pwdScore <= 2 ? 'ضعیف' : pwdScore <= 4 ? 'متوسط' : 'قوی'}
                         </span>
                       </div>
 
@@ -448,16 +420,16 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuth, initialEmail = '' })
                       {/* Micro Checklist */}
                       <div className="grid grid-cols-2 gap-1 text-[10px] text-slate-400 pt-1">
                         <span className={`flex items-center gap-1 ${hasLength ? 'text-emerald-400' : ''}`}>
-                          <Check className={`w-3 h-3 ${hasLength ? 'opacity-100' : 'opacity-30'}`} /> 8+ Characters
+                          <Check className={`w-3 h-3 ${hasLength ? 'opacity-100' : 'opacity-30'}`} /> حداقل ۸ نویسه
                         </span>
                         <span className={`flex items-center gap-1 ${hasUpper ? 'text-emerald-400' : ''}`}>
-                          <Check className={`w-3 h-3 ${hasUpper ? 'opacity-100' : 'opacity-30'}`} /> Uppercase Letter
+                          <Check className={`w-3 h-3 ${hasUpper ? 'opacity-100' : 'opacity-30'}`} /> حرف بزرگ انگلیسی
                         </span>
                         <span className={`flex items-center gap-1 ${hasNumber ? 'text-emerald-400' : ''}`}>
-                          <Check className={`w-3 h-3 ${hasNumber ? 'opacity-100' : 'opacity-30'}`} /> Number (0-9)
+                          <Check className={`w-3 h-3 ${hasNumber ? 'opacity-100' : 'opacity-30'}`} /> عدد (0-9)
                         </span>
                         <span className={`flex items-center gap-1 ${hasSpecial ? 'text-emerald-400' : ''}`}>
-                          <Check className={`w-3 h-3 ${hasSpecial ? 'opacity-100' : 'opacity-30'}`} /> Special Symbol
+                          <Check className={`w-3 h-3 ${hasSpecial ? 'opacity-100' : 'opacity-30'}`} /> نویسه ویژه
                         </span>
                       </div>
                     </motion.div>
@@ -473,9 +445,9 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuth, initialEmail = '' })
                       onChange={(e) => setRememberMe(e.target.checked)}
                       className="w-4 h-4 rounded border-slate-700 bg-slate-950 text-blue-600 focus:ring-blue-500 focus:ring-offset-slate-900 cursor-pointer"
                     />
-                    <span>Remember me on this browser</span>
+                    <span>مرا در این مرورگر به خاطر بسپار</span>
                   </label>
-                  <span className="text-[10px] text-slate-500 font-mono">Encrypted Cache</span>
+                  <span className="text-[10px] text-slate-500 font-mono">حافظه رمزگذاری‌شده</span>
                 </div>
 
                 {/* Error Banner */}
@@ -519,13 +491,13 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuth, initialEmail = '' })
                     <span className={`flex items-center justify-center gap-2 transition-transform duration-200 ${
                       isLoading ? 'opacity-0' : 'opacity-100'
                     }`}>
-                      {isLogin ? 'Sign In' : 'Create Account'}
-                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                      {isLogin ? 'ورود' : 'ایجاد حساب'}
+                      <ArrowRight className="w-4 h-4 mirror-rtl group-hover:translate-x-1 transition-transform" />
                     </span>
                     {isLoading && (
                       <span className="absolute inset-0 flex items-center justify-center gap-2">
                         <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        <span className="text-xs">Authenticating...</span>
+                        <span className="text-xs">در حال احراز هویت…</span>
                       </span>
                     )}
                   </button>
@@ -536,7 +508,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuth, initialEmail = '' })
               <div className="mt-6 pt-5 border-t border-slate-800/80">
                 <div className="text-center mb-3">
                   <span className="text-[11px] font-mono text-slate-400 uppercase tracking-wider">
-                    Or Sign In With
+                    یا ورود با
                   </span>
                 </div>
 
@@ -550,7 +522,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuth, initialEmail = '' })
                     <Fingerprint className={`w-4 h-4 text-cyan-400 group-hover:scale-110 transition-transform ${
                       biometricScanning ? 'animate-pulse' : ''
                     }`} />
-                    <span>{biometricScanning ? 'Scanning...' : 'Passkey'}</span>
+                    <span>{biometricScanning ? 'در حال اسکن…' : 'کلید عبور'}</span>
                   </button>
 
                   <button
@@ -577,7 +549,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuth, initialEmail = '' })
                       <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
                       <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                     </svg>
-                    <span>Google</span>
+                    <span>گوگل</span>
                   </button>
                 </div>
               </div>
@@ -586,7 +558,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuth, initialEmail = '' })
               <div className="mt-5 text-center">
                 <p className="text-[11px] text-slate-500 flex items-center justify-center gap-1.5 font-medium">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                  EAL6+ HSM Hardware Security • Zero Telemetry Leak
+                  امنیت سخت‌افزاری EAL6+ HSM • بدون نشت داده‌های تله‌متری
                 </p>
               </div>
 
@@ -608,7 +580,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuth, initialEmail = '' })
             >
               <button
                 onClick={() => setShowCertificateModal(false)}
-                className="absolute top-5 right-5 p-2 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                className="absolute top-5 end-5 p-2 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -618,51 +590,51 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuth, initialEmail = '' })
                   <ShieldCheck className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-white">Cyber Warranty Certificate</h3>
-                  <p className="text-xs text-slate-400 font-mono">Policy ID: RAD-AI-INS-98842-X</p>
+                  <h3 className="text-lg font-bold text-white">گواهی ضمانت امنیت سایبری</h3>
+                  <p className="text-xs text-slate-400 font-mono">شناسه بیمه‌نامه: RAD-AI-INS-98842-X</p>
                 </div>
               </div>
 
               <div className="space-y-3.5 text-xs text-slate-300">
                 <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
                   <div className="flex justify-between font-semibold text-white">
-                    <span>Underwritten Coverage</span>
+                    <span>پوشش بیمه‌ای</span>
                     <span className="text-emerald-400 font-mono">$5,000,000 USD</span>
                   </div>
                   <p className="text-slate-400 text-[11px]">
-                    Lloyd's Syndicate backing for data privacy breaches, prompt isolation failure, and zero retention violations.
+                    پوشش سندیکای Lloyd's برای نقض حریم خصوصی داده، اختلال در جداسازی پرامپت و تخطی از سیاست نگهداری صفر.
                   </p>
                 </div>
 
                 <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
                   <div className="flex justify-between font-semibold text-white">
-                    <span>Compliance Verifications</span>
+                    <span>تأییدیه‌های انطباق</span>
                     <span className="text-blue-400 font-mono">SOC 2 Type II • ISO 27001</span>
                   </div>
                   <p className="text-slate-400 text-[11px]">
-                    Audited bi-annually by Ernst & Young Cyber Risk Advisory.
+                    ممیزی دوسالانه توسط مشاوران ریسک سایبری Ernst & Young.
                   </p>
                 </div>
 
                 <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
                   <div className="flex justify-between font-semibold text-white">
-                    <span>Model Ingestion Policy</span>
-                    <span className="text-purple-400 font-mono">Zero Customer Data Training</span>
+                    <span>سیاست ورود داده به مدل</span>
+                    <span className="text-purple-400 font-mono">عدم آموزش با داده مشتری</span>
                   </div>
                   <p className="text-slate-400 text-[11px]">
-                    User images, object references, and prompt configurations are never indexed into public foundation models.
+                    تصاویر کاربران، مراجع محصول و تنظیمات پرامپت هرگز در مدل‌های پایه عمومی نمایه نمی‌شوند.
                   </p>
                 </div>
               </div>
 
               <div className="mt-6 pt-4 border-t border-slate-800 flex items-center justify-between">
-                <span className="text-[11px] text-slate-400 font-mono">Status: ACTIVE & VERIFIED</span>
+                <span className="text-[11px] text-slate-400 font-mono">وضعیت: فعال و تأییدشده</span>
                 <button
                   type="button"
                   onClick={() => setShowCertificateModal(false)}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer"
                 >
-                  Close Certificate
+                  بستن گواهی
                 </button>
               </div>
             </motion.div>

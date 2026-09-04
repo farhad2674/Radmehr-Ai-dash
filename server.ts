@@ -4,6 +4,10 @@ import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
+import { getDatabase } from './server/db/client';
+import { AuthService, bootstrapFirstSuperAdmin, readBootstrapConfiguration } from './server/auth/service';
+import { DrizzleAuthRepository } from './server/auth/drizzleRepository';
+import { createAuthRouter } from './server/auth/router';
 import {
   initDiskStorage,
   getUploadsDir,
@@ -39,6 +43,18 @@ initDiskStorage();
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// PostgreSQL authentication is isolated from the legacy product routes so the same
+// service and middleware can protect those routes during the next migration pass.
+let authRepository: DrizzleAuthRepository | null = null;
+if (process.env.DATABASE_URL?.trim()) {
+  authRepository = new DrizzleAuthRepository(getDatabase());
+  app.use('/api/auth', createAuthRouter(new AuthService(authRepository)));
+} else {
+  app.use('/api/auth', (_req: Request, res: Response) => {
+    res.status(503).json({ error: 'PostgreSQL authentication is not configured.' });
+  });
+}
 
 // Serve local static uploaded image assets directly from server disk (or persistent /app/uploads)
 const uploadsDir = getUploadsDir();
@@ -579,6 +595,21 @@ app.get('/api/health', (req: Request, res: Response) => {
 });
 
 async function startServer() {
+  // Validate partial bootstrap configuration even when PostgreSQL is unavailable.
+  // Full bootstrap configuration requires PostgreSQL and never falls back to disk users.
+  const bootstrapConfiguration = readBootstrapConfiguration(process.env);
+  if (bootstrapConfiguration && !authRepository) {
+    throw new Error('DATABASE_URL is required when RADMEHR_BOOTSTRAP_ADMIN_* variables are configured.');
+  }
+  if (authRepository) {
+    const bootstrapResult = await bootstrapFirstSuperAdmin(authRepository, process.env);
+    if (bootstrapResult === 'created') {
+      console.log('[Auth] Initial SUPER_ADMIN created successfully.');
+    } else if (bootstrapResult === 'refused-existing-users') {
+      console.warn('[Auth] SUPER_ADMIN bootstrap refused because the users table is not empty.');
+    }
+  }
+
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -599,4 +630,7 @@ async function startServer() {
   });
 }
 
-startServer();
+startServer().catch((error) => {
+  console.error('[Server] Startup failed:', error instanceof Error ? error.message : error);
+  process.exitCode = 1;
+});

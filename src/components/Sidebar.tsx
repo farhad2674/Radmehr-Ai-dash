@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatFaNumber, localizeRole } from '../utils/localization';
 import { 
   LayoutGrid, 
   Wrench, 
@@ -24,6 +25,7 @@ interface SidebarProps {
   completedGenerations?: number;
   generationLimit?: number;
   allowUnlimited?: boolean;
+  isAdmin?: boolean;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -37,20 +39,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
   completedGenerations = 24,
   generationLimit = 50,
   allowUnlimited = false,
+  isAdmin = false,
 }) => {
   const navItems = [
-    { id: 'workspace', label: 'Studio Workspace', icon: LayoutGrid },
-    { id: 'builder', label: 'Template Builder', icon: Wrench },
-    { id: 'explore', label: 'Explore Feed', icon: Compass },
-    { id: 'profile', label: 'My Profile', icon: User },
-    { id: 'governance', label: 'User Management', icon: Users },
+    { id: 'workspace', label: 'فضای کار استودیو', icon: LayoutGrid },
+    { id: 'builder', label: 'قالب‌ساز', icon: Wrench },
+    { id: 'explore', label: 'کاوش تصاویر', icon: Compass },
+    { id: 'profile', label: 'پروفایل من', icon: User },
+    ...(isAdmin ? [{ id: 'governance', label: 'تیم و راهبری', icon: Users }] : []),
   ];
 
   const percentage = allowUnlimited ? 0 : Math.min(100, Math.round((completedGenerations / generationLimit) * 100));
   const isAtLimit = !allowUnlimited && completedGenerations >= generationLimit;
 
   return (
-    <aside className="w-64 bg-white border-r border-[#e0e2ec] flex flex-col justify-between h-screen sticky top-0 shrink-0 select-none z-20">
+    <aside className="hidden md:flex w-64 bg-white border-e border-[#e0e2ec] flex-col justify-between h-screen sticky top-0 shrink-0 select-none z-20">
       {/* Brand Header */}
       <div>
         <div className="p-5 pb-4 border-b border-[#f0f2f8]">
@@ -63,7 +66,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 RadmehrAI Studio
               </h1>
               <p className="text-xs text-[#5F6368] font-medium mt-1">
-                {userRole}
+                {localizeRole(userRole)}
               </p>
             </div>
           </div>
@@ -75,7 +78,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className="mt-5 w-full bg-[#1A73E8] hover:bg-[#1557B0] active:scale-[0.99] text-white font-medium py-2.5 px-4 rounded-full flex items-center justify-center gap-2 shadow-sm transition-all duration-150 group cursor-pointer"
           >
             <Plus className="w-4 h-4 transition-transform group-hover:rotate-90 duration-200" />
-            <span className="text-sm font-medium">Create New Template</span>
+            <span className="text-sm font-medium">ساخت قالب جدید</span>
           </button>
         </div>
 
@@ -89,7 +92,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 key={item.id}
                 id={`nav-link-${item.id}`}
                 onClick={() => onNavigate(item.id)}
-                className={`w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer text-left ${
+                className={`w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer text-start ${
                   isActive
                     ? 'bg-[#E8F0FE] text-[#1A73E8] font-semibold'
                     : 'text-[#414754] hover:bg-[#F1F4F9] hover:text-[#191c23]'
@@ -111,15 +114,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
         
         {/* User Quota Status in Sidebar */}
         <div 
-          onClick={() => onNavigate('governance')}
+          onClick={() => onNavigate(isAdmin ? 'governance' : 'profile')}
           className="p-2.5 bg-[#F8F9FD] border border-[#E0E2EC] rounded-xl cursor-pointer hover:bg-gray-100 transition-colors"
         >
           <div className="flex items-center justify-between text-[11px] font-medium text-[#5F6368]">
             <span className="flex items-center gap-1.5">
-              <Gauge className="w-3.5 h-3.5 text-[#1A73E8]" /> Quota
+              <Gauge className="w-3.5 h-3.5 text-[#1A73E8]" /> سهمیه
             </span>
             <span className={`font-mono font-bold ${isAtLimit ? 'text-red-600' : 'text-[#191c23]'}`}>
-              {allowUnlimited ? 'Unlimited' : `${completedGenerations}/${generationLimit}`}
+              {allowUnlimited ? 'نامحدود' : formatFaNumber(completedGenerations) + ' از ' + formatFaNumber(generationLimit)}
             </span>
           </div>
           {!allowUnlimited && (
@@ -134,20 +137,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         <button
           id="nav-link-help"
-          onClick={() => alert('RadmehrAI Studio v2.4.1\nDocumentation & Support\n- AI Generation Limit Management (Default 50/user)\n- Direct OpenRouter Job Creation API & Polling System\n- Gemini Flash Image Engine\n- Enterprise Governance & RBAC')}
-          className="w-full flex items-center gap-3.5 px-3.5 py-2 rounded-xl text-xs font-medium text-[#414754] hover:bg-[#F1F4F9] hover:text-[#191c23] transition-colors cursor-pointer text-left"
+          onClick={() => alert('استودیو RadmehrAI نسخه ۲٫۴٫۱\nمستندات و پشتیبانی\n- مدیریت سقف تولید تصویر (پیش‌فرض ۵۰ برای هر کاربر)\n- API مستقیم OpenRouter و سامانه بررسی وضعیت\n- موتور تصویر Gemini Flash\n- راهبری سازمانی و RBAC')}
+          className="w-full flex items-center gap-3.5 px-3.5 py-2 rounded-xl text-xs font-medium text-[#414754] hover:bg-[#F1F4F9] hover:text-[#191c23] transition-colors cursor-pointer text-start"
         >
           <HelpCircle className="w-4 h-4 text-[#727785]" />
-          <span>Help & Docs</span>
+          <span>راهنما و مستندات</span>
         </button>
 
         <button
           id="nav-link-signout"
-          onClick={() => onLogout ? onLogout() : alert('Signed out of Enterprise AI Admin session.')}
-          className="w-full flex items-center gap-3.5 px-3.5 py-2 rounded-xl text-xs font-medium text-[#ba1a1a] hover:bg-red-50 transition-colors cursor-pointer text-left"
+          onClick={() => onLogout ? onLogout() : alert('از حساب کاربری خارج شدید.')}
+          className="w-full flex items-center gap-3.5 px-3.5 py-2 rounded-xl text-xs font-medium text-[#ba1a1a] hover:bg-red-50 transition-colors cursor-pointer text-start"
         >
           <LogOut className="w-4 h-4 text-[#ba1a1a]" />
-          <span>Sign Out</span>
+          <span>خروج</span>
         </button>
 
         {/* User Mini Card */}
@@ -157,7 +160,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold text-[#191c23] truncate">{userName}</p>
-            <p className="text-[11px] text-[#727785] truncate">{userEmail}</p>
+            <p className="text-[11px] text-[#727785] truncate" dir="ltr">{userEmail}</p>
           </div>
         </div>
       </div>
